@@ -1,13 +1,12 @@
 package org.team5183.beeapi.entities;
 
-import com.j256.ormlite.dao.ForeignCollection;
+import com.google.gson.Gson;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.persistence.*;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Set;
 
 @Entity
 @Table(name = "bee_items")
@@ -34,12 +33,15 @@ public class ItemEntity {
     @Column
     private @Nullable String partNumber;
 
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "checkout_id", referencedColumnName = "id")
-    private @Nullable CheckoutEntity checkout;
+    @Column
+    public @Nullable String checkout;
 
-    @OneToMany(targetEntity = CheckoutEntity.class, mappedBy = "item")
-    private @NotNull Collection<CheckoutEntity> checkouts;
+    @Column(nullable = false)
+    public @NotNull String checkouts;
+
+    private transient @Nullable CheckoutEntity checkoutEntity;
+
+    private transient @NotNull Collection<CheckoutEntity> checkoutEntities;
 
 
     public ItemEntity(@NotNull String name, @NotNull String description, @NotNull String photo, @NotNull Double price, @Nullable String retailer, @Nullable String partNumber) {
@@ -49,11 +51,14 @@ public class ItemEntity {
         this.price = price;
         this.retailer = retailer;
         this.partNumber = partNumber;
-        this.checkouts = new HashSet<>();
+        this.checkoutEntities = new HashSet<>();
+        this.checkouts = new Gson().toJson(checkoutEntities);
     }
 
-    @Deprecated
-    public ItemEntity() {}
+    private ItemEntity() {
+        new Gson().fromJson(checkout, CheckoutEntity.class);
+        new Gson().fromJson(checkouts, CheckoutEntity[].class);
+    }
 
     public @NotNull Long getId() {
         return id;
@@ -107,19 +112,53 @@ public class ItemEntity {
         this.partNumber = partNumber;
     }
 
-    public @Nullable CheckoutEntity getCheckout() {
+    public String getCheckout() {
         return checkout;
     }
 
-    public void setCheckout(@Nullable CheckoutEntity checkout) {
+    public void setCheckout(String checkout) {
         this.checkout = checkout;
     }
 
-    public @NotNull Collection<CheckoutEntity> getCheckouts() {
+    public String getCheckouts() {
         return checkouts;
     }
 
-    public void setCheckouts(@NotNull Collection<CheckoutEntity> checkouts) {
+    public void setCheckouts(String checkouts) {
         this.checkouts = checkouts;
+    }
+
+    public @Nullable CheckoutEntity getCheckoutEntity() {
+        return checkoutEntity;
+    }
+
+    public void setCheckoutEntity(@Nullable CheckoutEntity checkoutEntity) {
+        this.checkouts = new Gson().toJson(checkoutEntity);
+        this.checkoutEntity = checkoutEntity;
+
+        if (checkoutEntity != null) {
+            addCheckout(checkoutEntity);
+        } else {
+            for (CheckoutEntity checkout : checkoutEntities) {
+                if (checkout.getId().equals(checkoutEntity.getId()) && checkout.isActive()) {
+                    checkout.setActive(false);
+                    break;
+                }
+            }
+        }
+    }
+
+    public @NotNull Collection<CheckoutEntity> getCheckoutEntities() {
+        return checkoutEntities;
+    }
+
+    public @NotNull void addCheckout(@NotNull CheckoutEntity checkout) {
+        this.checkoutEntities.add(checkout);
+        this.checkouts = new Gson().toJson(checkoutEntities);
+    }
+
+    public void setCheckoutEntities(@NotNull Collection<CheckoutEntity> checkoutEntities) {
+        this.checkouts = new Gson().toJson(checkoutEntities);
+        this.checkoutEntities = checkoutEntities;
     }
 }

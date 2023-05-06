@@ -6,11 +6,11 @@ import org.apache.logging.log4j.Logger;
 import org.team5183.beeapi.endpoints.ItemEndpoint;
 import org.team5183.beeapi.endpoints.MiscEndpoints;
 import org.team5183.beeapi.endpoints.UserEndpoint;
+import org.team5183.beeapi.entities.CheckoutEntity;
 import org.team5183.beeapi.entities.ItemEntity;
 import org.team5183.beeapi.response.BasicResponse;
 import org.team5183.beeapi.response.ResponseStatus;
 import org.team5183.beeapi.util.Database;
-import spark.Service;
 
 import java.sql.SQLException;
 
@@ -40,7 +40,14 @@ public class Main {
 
         Database.init();
 
+        //for testing purposes.
+        ItemEntity item = new ItemEntity("a", "a", "a", 1.0D, "a", "a");
+        item.setCheckoutEntity(
+                new CheckoutEntity("asd", 1234789L)
+        );
 
+        Database.upsertItemEntity(item);
+        logger.info(new Gson().toJson(item));
 
         init();
     }

@@ -5,45 +5,28 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.persistence.*;
 
-@Entity
-@Table(name = "bee_checkouts")
 public class CheckoutEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public @NotNull Long id;
+    private @NotNull Long id;
 
-    @ManyToOne
-    @JoinColumn(name="item_id", nullable = false)
-    @NotNull ItemEntity item;
 
-    @Column
-    public @NotNull String checkoutName;
+    private @NotNull String checkoutName;
 
-    @Column
-    public @NotNull Long checkoutDate;
+    private @NotNull Long checkoutDate;
 
-    @Column
-    public @Nullable Long returnDate;
+    private @Nullable Long returnDate;
 
-    @Column
-    public @NotNull Boolean active;
+    private @NotNull Boolean active;
 
-    public CheckoutEntity(@NotNull ItemEntity item, @NotNull String checkoutName, @NotNull Long checkoutDate) {
-        this.item = item;
+    public CheckoutEntity(@NotNull String checkoutName, @NotNull Long checkoutDate) {
         this.checkoutName = checkoutName;
         this.checkoutDate = checkoutDate;
         this.active = true;
     }
 
-    @Deprecated
-    public CheckoutEntity() {}
+    private CheckoutEntity() {}
 
     public @NotNull Long getId() {
         return id;
-    }
-
-    public ItemEntity getItem() {
-        return item;
     }
 
     public @NotNull String getCheckoutName() {

@@ -30,22 +30,31 @@ public class ItemEndpoint extends Endpoint {
             });
 
             path("/:id", () -> {
-                get("", (req, res) -> {
-                    if (!isValidId(req)) {
-                        res.status(400);
-                        return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid ID"));
+                before("", (req, res) -> {
+                    if (req.params(":id").equals("all") || req.params(":id").equals("new")) {
+                        return;
+                    }
+
+                    if (req.params(":id").isEmpty()) {
+                        halt(400, gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Missing ID")));
                     }
 
                     try {
-                        if (!isExistingItem(req)) {
-                            res.status(404);
-                            return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " does not exist"));
-                        }
-                    } catch (SQLException e) {
-                        res.status(500);
-                        return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
+                        Long.parseLong(req.params(":id"));
+                    } catch (NumberFormatException e) {
+                        halt(400, gson.toJson(new BasicResponse(ResponseStatus.ERROR, "ID must be a number.")));
                     }
 
+                    try {
+                        if (Database.getItemEntity(Long.parseLong(req.params(":id"))) == null) {
+                            halt(404, gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " not found")));
+                        }
+                    } catch (SQLException e) {
+                        halt(500, gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error")));
+                    }
+                });
+
+                get("", (req, res) -> {
                     try {
                         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(Database.getItemEntity(Long.parseLong(req.params(":id"))))));
                     } catch (SQLException e) {
@@ -53,22 +62,8 @@ public class ItemEndpoint extends Endpoint {
                         return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
                     }
                 });
+
                 delete("", (req, res) -> {
-                    if (!isValidId(req)) {
-                        res.status(400);
-                        return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid ID"));
-                    }
-
-                    try {
-                        if (!isExistingItem(req)) {
-                            res.status(404);
-                            return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " does not exist"));
-                        }
-                    } catch (SQLException e) {
-                        res.status(500);
-                        return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
-                    }
-
                     try {
                         Database.deleteItemEntity(Database.getItemEntity(Long.parseLong(req.params(":id"))));
                     } catch (SQLException e) {
@@ -78,22 +73,8 @@ public class ItemEndpoint extends Endpoint {
 
                     return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Deleted Item with ID " + req.params(":id")));
                 });
+
                 patch("", (req, res) -> {
-                    if (!isValidId(req)) {
-                        res.status(400);
-                        return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid ID"));
-                    }
-
-                    try {
-                        if (!isExistingItem(req)) {
-                            res.status(404);
-                            return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " does not exist"));
-                        }
-                    } catch (SQLException e) {
-                        res.status(500);
-                        return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
-                    }
-
                     ItemEntity item;
                     try {
                         item = gson.fromJson(req.body(), ItemEntity.class);
@@ -111,6 +92,11 @@ public class ItemEndpoint extends Endpoint {
 
                     return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Updated Item with ID " + req.params(":id"), new Gson().toJsonTree(item)));
                 });
+
+                path("/checkout", () -> {
+                    //todo
+                });
+
             });
 
             post("/new", (req, res) -> {
@@ -136,22 +122,4 @@ public class ItemEndpoint extends Endpoint {
         });
     }
 
-    private boolean isValidId(Request req) {
-        if (req.params(":id") == null) {
-            return false;
-        }
-
-        try {
-            Long.parseLong(req.params(":id"));
-        } catch (NumberFormatException e) {
-            return false;
-        }
-
-        return true;
-    }
-
-    private boolean isExistingItem(Request req) throws SQLException {
-        if (!isValidId(req)) return false;
-        return Database.getItemEntity(Long.parseLong(req.params(":id"))) != null;
-    }
 }
