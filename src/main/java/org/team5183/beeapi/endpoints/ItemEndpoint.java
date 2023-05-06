@@ -14,19 +14,19 @@ import java.sql.SQLException;
 
 import static spark.Spark.*;
 
-public class ItemEndpoint implements Endpoint {
+public class ItemEndpoint extends Endpoint {
     private static final Logger logger = LogManager.getLogger(ItemEndpoint.class);
-    private static final Gson gson = new Gson();
-
-    public ItemEndpoint() {
-        registerEndpoints();
-    }
 
     @Override
-    public void registerEndpoints() {
+    void registerEndpoints() {
         path("/items" , () -> {
             get("/all", (req, res) -> {
-                return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "all items", gson.toJsonTree(Database.getAllItemEntities())));
+                try {
+                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(Database.getAllItemEntities())));
+                } catch (SQLException e) {
+                    res.status(500);
+                    return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
+                }
             });
 
             path("/:id", () -> {
@@ -47,13 +47,13 @@ public class ItemEndpoint implements Endpoint {
                     }
 
                     try {
-                        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "item " + req.params(":id"), gson.toJsonTree(Database.getItemEntity(Long.parseLong(req.params(":id"))))));
+                        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(Database.getItemEntity(Long.parseLong(req.params(":id"))))));
                     } catch (SQLException e) {
                         res.status(500);
                         return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
                     }
                 });
-                delete("/delete", (req, res) -> {
+                delete("", (req, res) -> {
                     if (!isValidId(req)) {
                         res.status(400);
                         return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid ID"));
@@ -78,7 +78,7 @@ public class ItemEndpoint implements Endpoint {
 
                     return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Deleted Item with ID " + req.params(":id")));
                 });
-                patch("/update", (req, res) -> {
+                patch("", (req, res) -> {
                     if (!isValidId(req)) {
                         res.status(400);
                         return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid ID"));
@@ -94,7 +94,13 @@ public class ItemEndpoint implements Endpoint {
                         return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
                     }
 
-                    ItemEntity item = gson.fromJson(req.body(), ItemEntity.class);
+                    ItemEntity item;
+                    try {
+                        item = gson.fromJson(req.body(), ItemEntity.class);
+                    } catch (JsonSyntaxException e) {
+                        res.status(400);
+                        return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid Body"));
+                    }
 
                     try {
                         Database.upsertItemEntity(item);
@@ -103,24 +109,18 @@ public class ItemEndpoint implements Endpoint {
                         return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
                     }
 
-                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Updated Item with ID " + req.params(":id")));
+                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Updated Item with ID " + req.params(":id"), new Gson().toJsonTree(item)));
                 });
             });
 
             post("/new", (req, res) -> {
-                if (req.body().isEmpty()) {
-                    res.status(400);
-                    return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Missing Body"));
-                }
-
+                ItemEntity item;
                 try {
-                    gson.fromJson(req.body(), ItemEntity.class);
+                    item = gson.fromJson(req.body(), ItemEntity.class);
                 } catch (JsonSyntaxException e) {
                     res.status(400);
                     return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid Body"));
                 }
-
-                ItemEntity item = gson.fromJson(req.body(), ItemEntity.class);
 
                 try {
                     Database.upsertItemEntity(item);

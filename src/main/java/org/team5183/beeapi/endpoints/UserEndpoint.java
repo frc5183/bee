@@ -5,13 +5,14 @@ import org.apache.logging.log4j.Logger;
 
 import static spark.Spark.*;
 
-public class UserEndpoint implements Endpoint {
+public class UserEndpoint extends Endpoint {
+    //todo
     private static final Logger logger = LogManager.getLogger(UserEndpoint.class);
     public UserEndpoint() {
         registerEndpoints();
     }
     @Override
-    public void registerEndpoints() {
+    void registerEndpoints() {
         path("/users", () -> {
             get("", (req, res) -> {
                 return "Hello, world!";
