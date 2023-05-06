@@ -2,7 +2,7 @@ package org.team5183.beeapi.response;
 
 public enum ResponseStatus {
     SUCCESS("success"),
-    FAILURE("failure");
+    ERROR("error");
 
     private String status;
 
