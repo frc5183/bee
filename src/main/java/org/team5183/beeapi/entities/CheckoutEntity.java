@@ -3,12 +3,7 @@ package org.team5183.beeapi.entities;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.persistence.*;
-
 public class CheckoutEntity {
-    private @NotNull Long id;
-
-
     private @NotNull String checkoutName;
 
     private @NotNull Long checkoutDate;
@@ -17,16 +12,15 @@ public class CheckoutEntity {
 
     private @NotNull Boolean active;
 
+
+    /**
+     * @param checkoutName The name of the person who checked out the item
+     * @param checkoutDate The date the item was checked in milliseconds since epoch
+     */
     public CheckoutEntity(@NotNull String checkoutName, @NotNull Long checkoutDate) {
         this.checkoutName = checkoutName;
         this.checkoutDate = checkoutDate;
         this.active = true;
-    }
-
-    private CheckoutEntity() {}
-
-    public @NotNull Long getId() {
-        return id;
     }
 
     public @NotNull String getCheckoutName() {

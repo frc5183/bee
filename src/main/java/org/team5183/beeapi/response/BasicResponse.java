@@ -3,7 +3,7 @@ package org.team5183.beeapi.response;
 import com.google.gson.JsonElement;
 
 public class BasicResponse {
-    public ResponseStatus status;
+    public final ResponseStatus status;
     public String message;
     public JsonElement data;
 

@@ -4,11 +4,12 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.team5183.beeapi.constants.Permission;
 import org.team5183.beeapi.entities.ItemEntity;
+import org.team5183.beeapi.middleware.Authentication;
 import org.team5183.beeapi.response.BasicResponse;
 import org.team5183.beeapi.response.ResponseStatus;
 import org.team5183.beeapi.util.Database;
-import spark.Request;
 
 import java.sql.SQLException;
 
@@ -20,10 +21,13 @@ public class ItemEndpoint extends Endpoint {
     @Override
     void registerEndpoints() {
         path("/items" , () -> {
+            before("*", Authentication::authenticate);
             get("/all", (req, res) -> {
+                before("", Authentication.checkPermission(req, res, Permission.CAN_VIEW_ITEMS));
                 try {
                     return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(Database.getAllItemEntities())));
                 } catch (SQLException e) {
+                    logger.error(e);
                     res.status(500);
                     return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
                 }
@@ -50,23 +54,28 @@ public class ItemEndpoint extends Endpoint {
                             halt(404, gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " not found")));
                         }
                     } catch (SQLException e) {
+                        logger.error(e);
                         halt(500, gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error")));
                     }
                 });
 
                 get("", (req, res) -> {
+                    before("", Authentication.checkPermission(req, res, Permission.CAN_VIEW_ITEMS));
                     try {
                         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(Database.getItemEntity(Long.parseLong(req.params(":id"))))));
                     } catch (SQLException e) {
+                        logger.error(e);
                         res.status(500);
                         return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
                     }
                 });
 
                 delete("", (req, res) -> {
+                    before("", Authentication.checkPermission(req, res, Permission.CAN_DELETE_ITEMS));
                     try {
                         Database.deleteItemEntity(Database.getItemEntity(Long.parseLong(req.params(":id"))));
                     } catch (SQLException e) {
+                        logger.error(e);
                         res.status(500);
                         return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
                     }
@@ -75,6 +84,7 @@ public class ItemEndpoint extends Endpoint {
                 });
 
                 patch("", (req, res) -> {
+                    before("", Authentication.checkPermission(req, res, Permission.CAN_EDIT_ITEMS));
                     ItemEntity item;
                     try {
                         item = gson.fromJson(req.body(), ItemEntity.class);
@@ -100,6 +110,7 @@ public class ItemEndpoint extends Endpoint {
             });
 
             post("/new", (req, res) -> {
+                before("", Authentication.checkPermission(req, res, Permission.CAN_CREATE_ITEMS));
                 ItemEntity item;
                 try {
                     item = gson.fromJson(req.body(), ItemEntity.class);
@@ -111,7 +122,7 @@ public class ItemEndpoint extends Endpoint {
                 try {
                     Database.upsertItemEntity(item);
                 } catch (SQLException e) {
-                    logger.debug(e);
+                    logger.error(e);
                     res.status(500);
                     return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
                 }

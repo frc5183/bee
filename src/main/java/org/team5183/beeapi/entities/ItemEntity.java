@@ -11,6 +11,7 @@ import java.util.HashSet;
 @Entity
 @Table(name = "bee_items")
 public class ItemEntity {
+    @SuppressWarnings("NotNullFieldNotInitialized")
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private @NotNull Long id;
@@ -44,6 +45,14 @@ public class ItemEntity {
     private transient @NotNull Collection<CheckoutEntity> checkoutEntities;
 
 
+    /**
+     * @param name        The name of the item
+     * @param description The description of the item
+     * @param photo       The URL of the photo of the item
+     * @param price       The price of the item
+     * @param retailer    The retailer of the item
+     * @param partNumber  The part number of the item
+     */
     public ItemEntity(@NotNull String name, @NotNull String description, @NotNull String photo, @NotNull Double price, @Nullable String retailer, @Nullable String partNumber) {
         this.name = name;
         this.description = description;
@@ -55,6 +64,10 @@ public class ItemEntity {
         this.checkouts = new Gson().toJson(checkoutEntities);
     }
 
+
+    /**
+     * This constructor is and should only be used by JPA and ORMLite.
+     */
     private ItemEntity() {
         new Gson().fromJson(checkout, CheckoutEntity.class);
         new Gson().fromJson(checkouts, CheckoutEntity[].class);
@@ -112,19 +125,19 @@ public class ItemEntity {
         this.partNumber = partNumber;
     }
 
-    public String getCheckout() {
+    public @Nullable String getCheckout() {
         return checkout;
     }
 
-    public void setCheckout(String checkout) {
+    public void setCheckout(@Nullable String checkout) {
         this.checkout = checkout;
     }
 
-    public String getCheckouts() {
+    public @NotNull String getCheckouts() {
         return checkouts;
     }
 
-    public void setCheckouts(String checkouts) {
+    public void setCheckouts(@NotNull String checkouts) {
         this.checkouts = checkouts;
     }
 
@@ -140,7 +153,7 @@ public class ItemEntity {
             addCheckout(checkoutEntity);
         } else {
             for (CheckoutEntity checkout : checkoutEntities) {
-                if (checkout.getId().equals(checkoutEntity.getId()) && checkout.isActive()) {
+                if (checkout.isActive()) {
                     checkout.setActive(false);
                     break;
                 }
@@ -152,7 +165,7 @@ public class ItemEntity {
         return checkoutEntities;
     }
 
-    public @NotNull void addCheckout(@NotNull CheckoutEntity checkout) {
+    public void addCheckout(@NotNull CheckoutEntity checkout) {
         this.checkoutEntities.add(checkout);
         this.checkouts = new Gson().toJson(checkoutEntities);
     }
