@@ -47,6 +47,8 @@ public class HashPassword {
         byte[] saltBytes = salt.getBytes();
         byte[] hashedPasswordBytes = hashedPassword.getBytes();
         byte[] generatedHash = generateHashedPassword(password, saltBytes);
+
+        //this is for debugging purposes
         logger.info("password: " + password);
         logger.info("salt: " + salt);
         logger.info("Generated hash: " + generatedHash.toString());
