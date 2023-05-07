@@ -6,6 +6,8 @@ import com.auth0.jwt.exceptions.IncorrectClaimException;
 import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.google.gson.Gson;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.team5183.beeapi.authentication.JWTManager;
 import org.team5183.beeapi.constants.Permission;
 import org.team5183.beeapi.constants.Role;
@@ -22,6 +24,8 @@ import java.sql.SQLException;
 import static spark.Spark.*;
 
 public class Authentication {
+    private static final Logger logger = LogManager.getLogger(Authentication.class);
+
     public static void authenticate(Request request, Response response) {
         String token = request.headers("Authorization");
         if (token == null || token.isEmpty() || token.isBlank()) {
@@ -76,7 +80,8 @@ public class Authentication {
         try {
             UserEntity user = Database.getUserEntityByToken(token);
             assert user != null;
-            if (!(user.getPermissionsList().contains(permission)) || !(user.getRole().equals(Role.ADMIN))) halt(403, new Gson().toJson(new BasicResponse(ResponseStatus.ERROR, "Insufficient Permissions")));
+            logger.info(user.getRole());
+            if (!(user.getPermissionsList().contains(permission)) && !((user.getRole().equals(Role.ADMIN)))) halt(403, new Gson().toJson(new BasicResponse(ResponseStatus.ERROR, "Insufficient Permissions")));
         } catch (SQLException e) {
             halt(500, new Gson().toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error")));
         }

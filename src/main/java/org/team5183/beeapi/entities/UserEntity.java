@@ -1,8 +1,8 @@
 package org.team5183.beeapi.entities;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonSyntaxException;
+import com.google.gson.*;
+import com.j256.ormlite.field.DataType;
+import com.j256.ormlite.field.DatabaseField;
 import org.jetbrains.annotations.NotNull;
 import org.team5183.beeapi.authentication.HashPassword;
 import org.team5183.beeapi.authentication.JWTManager;
@@ -34,10 +34,12 @@ public class UserEntity {
     private @NotNull String displayName;
 
     @Column(nullable = false)
-    private @NotNull String hashedPassword;
+    @DatabaseField(canBeNull = false, dataType = DataType.BYTE_ARRAY)
+    private byte[] hashedPassword;
 
     @Column(nullable = false)
-    private @NotNull String salt;
+    @DatabaseField(canBeNull = false, dataType = DataType.BYTE_ARRAY)
+    private byte[] salt;
 
     @Column(nullable = false)
     private @NotNull String token;
@@ -64,7 +66,7 @@ public class UserEntity {
         this.email = email;
         this.displayName = displayName;
         this.token = token;
-        String[] saltedPassword = HashPassword.generateSaltedHashedPassword(password);
+        byte[][] saltedPassword = HashPassword.generateSaltedHashedPassword(password);
         this.salt = saltedPassword[0];
         this.hashedPassword = saltedPassword[1];
         this.role = role;
@@ -123,19 +125,19 @@ public class UserEntity {
         this.token = token;
     }
 
-    public @NotNull String getHashedPassword() {
+    public byte[] getHashedPassword() {
         return hashedPassword;
     }
 
-    public void setHashedPassword(@NotNull String hashedPassword) {
+    public void setHashedPassword(byte[] hashedPassword) {
         this.hashedPassword = hashedPassword;
     }
 
-    public @NotNull String getSalt() {
+    public byte[] getSalt() {
         return salt;
     }
 
-    public void setSalt(@NotNull String salt) {
+    public void setSalt(byte[] salt) {
         this.salt = salt;
     }
 
@@ -158,7 +160,11 @@ public class UserEntity {
     public Collection<Permission> getPermissionsList() {
         if (this.permissionsList == null) {
             try {
-                this.permissionsList = new Gson().fromJson(this.permissions, Collection.class);
+                this.permissionsList = new HashSet<>();
+                JsonArray obj = new Gson().fromJson(this.permissions, JsonArray.class);
+                obj.forEach((element) -> {
+                    this.permissionsList.add(Permission.valueOf(element.getAsString()));
+                });
             } catch (JsonSyntaxException e) {
                 this.permissionsList = new HashSet<>();
             }

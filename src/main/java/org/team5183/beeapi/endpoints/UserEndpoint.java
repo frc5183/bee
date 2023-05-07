@@ -241,7 +241,9 @@ public class UserEndpoint extends Endpoint {
                     }
 
                     String newPassword = changePassword.get("newPassword").getAsString();
-                    String[] hashed = HashPassword.generateSaltedHashedPassword(newPassword);
+                    byte[][] hashed = HashPassword.generateSaltedHashedPassword(newPassword);
+                    ue.setSalt(hashed[0]);
+                    ue.setHashedPassword(hashed[1]);
 
 
                     try {
