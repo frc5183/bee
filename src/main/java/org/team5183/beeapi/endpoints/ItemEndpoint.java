@@ -100,7 +100,7 @@ public class ItemEndpoint extends Endpoint {
                         return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
                     }
 
-                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Updated Item with ID " + req.params(":id"), new Gson().toJsonTree(item)));
+                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Updated Item with ID " + req.params(":id"), item.toJson()));
                 });
 
                 path("/checkout", () -> {
@@ -128,7 +128,7 @@ public class ItemEndpoint extends Endpoint {
                 }
 
                 res.status(201);
-                return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Created item with ID "+ item.getId(), new Gson().toJsonTree(item)));
+                return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Created item with ID "+ item.getId(), item.toJson()));
             });
         });
     }

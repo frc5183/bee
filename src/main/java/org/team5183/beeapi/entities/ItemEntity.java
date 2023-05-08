@@ -1,6 +1,7 @@
 package org.team5183.beeapi.entities;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -173,5 +174,14 @@ public class ItemEntity {
     public void setCheckoutEntities(@NotNull Collection<CheckoutEntity> checkoutEntities) {
         this.checkouts = new Gson().toJson(checkoutEntities);
         this.checkoutEntities = checkoutEntities;
+    }
+
+    public JsonElement toJson() {
+        JsonElement obj = new Gson().toJsonTree(this);
+        obj.getAsJsonObject().remove("checkout");
+        obj.getAsJsonObject().remove("checkouts");
+        obj.getAsJsonObject().remove("checkoutEntity");
+        obj.getAsJsonObject().remove("checkoutEntities");
+        return obj;
     }
 }
