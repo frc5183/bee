@@ -151,7 +151,7 @@ public class ItemEntity {
         this.checkoutEntity = checkoutEntity;
 
         if (checkoutEntity != null) {
-            addCheckout(checkoutEntity);
+            addCheckoutEntity(checkoutEntity);
         } else {
             for (CheckoutEntity checkout : checkoutEntities) {
                 if (checkout.isActive()) {
@@ -166,8 +166,13 @@ public class ItemEntity {
         return checkoutEntities;
     }
 
-    public void addCheckout(@NotNull CheckoutEntity checkout) {
+    public void addCheckoutEntity(@NotNull CheckoutEntity checkout) {
         this.checkoutEntities.add(checkout);
+        this.checkouts = new Gson().toJson(checkoutEntities);
+    }
+
+    public void removeCheckoutEntity(@NotNull CheckoutEntity checkout) {
+        this.checkoutEntities.remove(checkout);
         this.checkouts = new Gson().toJson(checkoutEntities);
     }
 

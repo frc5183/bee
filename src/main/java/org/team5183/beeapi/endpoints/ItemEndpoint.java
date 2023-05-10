@@ -5,6 +5,7 @@ import com.google.gson.JsonSyntaxException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.team5183.beeapi.constants.Permission;
+import org.team5183.beeapi.entities.CheckoutEntity;
 import org.team5183.beeapi.entities.ItemEntity;
 import org.team5183.beeapi.middleware.Authentication;
 import org.team5183.beeapi.response.BasicResponse;
@@ -12,6 +13,8 @@ import org.team5183.beeapi.response.ResponseStatus;
 import org.team5183.beeapi.util.Database;
 
 import java.sql.SQLException;
+import java.time.Instant;
+import java.util.HashSet;
 
 import static spark.Spark.*;
 
@@ -104,20 +107,106 @@ public class ItemEndpoint extends Endpoint {
                 });
 
                 path("/checkout", () -> {
-                    //todo
+                    get("/active", (req, res) -> {
+                        before("", Authentication.checkPermission(req, res, Permission.CAN_VIEW_CHECKOUTS));
+                        ItemEntity item;
+                        try {
+                            item = Database.getItemEntity(Long.parseLong(req.params(":id")));
+                        } catch (SQLException e) {
+                            logger.error(e);
+                            res.status(500);
+                            return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
+                        }
+                        assert item != null;
+
+                        if (item.getCheckoutEntity() == null) {
+                            res.status(404);
+                            return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " is not checked out"));
+                        }
+
+                        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(item.getCheckoutEntity())));
+                    });
+
+                    get("/all", (req, res) -> {
+                        before("", Authentication.checkPermission(req, res, Permission.CAN_VIEW_CHECKOUTS));
+                        ItemEntity item;
+                        try {
+                            item = Database.getItemEntity(Long.parseLong(req.params(":id")));
+                        } catch (SQLException e) {
+                            logger.error(e);
+                            res.status(500);
+                            return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
+                        }
+                        assert item != null;
+                        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(item.getCheckoutEntities())));
+                    });
                 });
 
+                patch("/checkout", (req, res) -> {
+                    before("", Authentication.checkPermission(req, res, Permission.CAN_CHECKOUT_ITEMS));
+                    ItemEntity item;
+                    try {
+                        item = Database.getItemEntity(Long.parseLong(req.params(":id")));
+                    } catch (SQLException e) {
+                        logger.error(e);
+                        res.status(500);
+                        return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
+                    }
+                    assert item != null;
+
+                    CheckoutEntity checkout;
+                    try {
+                        checkout = gson.fromJson(req.body(), CheckoutEntity.class);
+                    } catch (JsonSyntaxException e) {
+                        res.status(400);
+                        return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid Body"));
+                    }
+
+                    if (checkout == null) {
+                        res.status(400);
+                        return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid Body"));
+                    }
+
+                    checkout.setActive(true);
+
+                    item.setCheckoutEntity(checkout);
+                    try {
+                        Database.upsertItemEntity(item);
+                    } catch (SQLException e) {
+                        logger.error(e);
+                        res.status(500);
+                        return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
+                    }
+
+                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Checked out Item with ID " + req.params(":id")));
+                });
             });
 
-            post("/new", (req, res) -> {
-                before("", Authentication.checkPermission(req, res, Permission.CAN_CREATE_ITEMS));
+            post("/return", (req, res) -> {
+               // set checkout entity to null and get current entity and set active to false
+                before("", Authentication.checkPermission(req, res, Permission.CAN_RETURN_ITEMS));
                 ItemEntity item;
                 try {
-                    item = gson.fromJson(req.body(), ItemEntity.class);
-                } catch (JsonSyntaxException e) {
-                    res.status(400);
-                    return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid Body"));
+                    item = Database.getItemEntity(Long.parseLong(req.params(":id")));
+                } catch (SQLException e) {
+                    logger.error(e);
+                    res.status(500);
+                    return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
                 }
+
+                assert item != null;
+
+                CheckoutEntity checkout = item.getCheckoutEntity();
+                if (checkout == null) {
+                    res.status(404);
+                    return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " is not checked out"));
+                }
+
+                item.setCheckoutEntity(null);
+                item.removeCheckoutEntity(checkout);
+                checkout.setActive(false);
+                checkout.setReturnDate(Instant.now().toEpochMilli());
+                item.addCheckoutEntity(checkout);
 
                 try {
                     Database.upsertItemEntity(item);
@@ -127,8 +216,7 @@ public class ItemEndpoint extends Endpoint {
                     return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
                 }
 
-                res.status(201);
-                return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Created item with ID "+ item.getId(), item.toJson()));
+                return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Returned Item with ID " + req.params(":id")));
             });
         });
     }

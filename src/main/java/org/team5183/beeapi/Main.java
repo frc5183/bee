@@ -13,6 +13,7 @@ import org.team5183.beeapi.response.ResponseStatus;
 import org.team5183.beeapi.util.Database;
 
 import java.sql.SQLException;
+import java.time.Instant;
 
 import static spark.Spark.*;
 
@@ -44,16 +45,5 @@ public class Main {
         new MiscEndpoints();
 
         Database.init();
-
-        //for testing purposes.
-        ItemEntity item = new ItemEntity("a", "a", "a", 1.0D, "a", "a");
-        item.setCheckoutEntity(
-                new CheckoutEntity("asd", 1234789L)
-        );
-
-        Database.upsertItemEntity(item);
-        logger.info(new Gson().toJson(item));
-
-        init();
     }
 }
