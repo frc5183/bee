@@ -1,0 +1,12 @@
+services:
+    api:
+        build: .
+        environment:
+            IP: "0.0.0.0"
+            PORT: "5050"
+            JWT_SECRET: "secret"
+            #DATABASE_URL: "jdbc:mariadb://db:3306/database?user=root&password=secret"
+        ports:
+            - "80:5050"
+        volumes:
+            - ./:/app/work
