@@ -2,6 +2,7 @@ package org.team5183.beeapi.entities;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
+import com.google.gson.annotations.Expose;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,26 +13,32 @@ import java.util.HashSet;
 @Entity
 @Table(name = "bee_items")
 public class ItemEntity {
-    @SuppressWarnings("NotNullFieldNotInitialized")
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Expose
     private @NotNull Long id;
 
+    @Expose
     @Column(nullable = false)
     private @NotNull String name;
 
+    @Expose
     @Column(nullable = false)
     private @NotNull String description;
 
+    @Expose
     @Column(nullable = false)
     private @NotNull String photo;
 
+    @Expose
     @Column
     private @NotNull Double price;
 
+    @Expose
     @Column
     private @Nullable String retailer;
 
+    @Expose
     @Column
     private @Nullable String partNumber;
 

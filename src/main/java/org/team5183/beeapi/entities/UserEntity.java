@@ -1,6 +1,7 @@
 package org.team5183.beeapi.entities;
 
 import com.google.gson.*;
+import com.google.gson.annotations.Expose;
 import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
 import org.jetbrains.annotations.NotNull;
@@ -22,14 +23,18 @@ public class UserEntity {
     @SuppressWarnings("NotNullFieldNotInitialized")
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Expose
     private @NotNull Long id;
 
+    @Expose
     @Column(nullable = false)
     private @NotNull String login;
 
+    @Expose
     @Column(nullable = false)
     private @NotNull String email;
 
+    @Expose
     @Column(nullable = false)
     private @NotNull String displayName;
 
@@ -44,9 +49,11 @@ public class UserEntity {
     @Column(nullable = false)
     private @NotNull String token;
 
+    @Expose
     @Column(nullable = false)
     private @NotNull Role role;
 
+    @Expose
     @Column(nullable = false)
     private @NotNull String permissions;
 

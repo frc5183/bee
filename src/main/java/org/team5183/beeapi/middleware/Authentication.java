@@ -1,6 +1,5 @@
 package org.team5183.beeapi.middleware;
 
-import com.auth0.jwt.JWT;
 import com.auth0.jwt.exceptions.AlgorithmMismatchException;
 import com.auth0.jwt.exceptions.IncorrectClaimException;
 import com.auth0.jwt.exceptions.SignatureVerificationException;
