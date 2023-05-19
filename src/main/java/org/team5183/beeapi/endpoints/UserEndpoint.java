@@ -124,13 +124,13 @@ public class UserEndpoint extends Endpoint {
                     return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid Body"));
                 }
 
-//                if ((!(login.has("login")) && !(login.has("email")))
-//                        || (!(login.get("login").getAsString().isBlank()) && !(login.get("email").getAsString().isBlank()))
-//                        || (!(login.get("login").getAsString().isEmpty()) && !(login.get("email").getAsString().isEmpty()))
-//                ) {
-//                    res.status(400);
-//                    return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Missing Login or Email"));
-//                }
+                if ((!(login.has("login")) && !(login.has("email")))
+                        || (!(login.get("login").getAsString().isBlank()) && !(login.get("email").getAsString().isBlank()))
+                        || (!(login.get("login").getAsString().isEmpty()) && !(login.get("email").getAsString().isEmpty()))
+                ) {
+                    res.status(400);
+                    return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Missing Login or Email"));
+                }
 
                 if (!login.has("password") || login.get("password").getAsString().isEmpty() || login.get("password").getAsString().isBlank()) {
                     res.status(400);

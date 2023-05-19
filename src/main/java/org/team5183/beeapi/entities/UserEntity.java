@@ -96,74 +96,128 @@ public class UserEntity {
 //        }
     }
 
+    /**
+     * @return The ID of the user.
+     */
     public @NotNull Long getId() {
         return id;
     }
 
+    /**
+     * @return The login (username) of the user.
+     */
     public @NotNull String getLogin() {
         return login;
     }
 
+    /**
+     * @param login The login (username) of the user.
+     */
     public void setLogin(@NotNull String login) {
         this.login = login;
     }
 
+    /**
+     * @return The email of the user.
+     */
     public @NotNull String getEmail() {
         return email;
     }
 
+    /**
+     * @param email The email of the user.
+     */
     public void setEmail(@NotNull String email) {
         this.email = email;
     }
 
+    /**
+     * @return The display name of the user.
+     */
     public @NotNull String getDisplayName() {
         return displayName;
     }
 
+    /**
+     * @param displayName The display name of the user.
+     */
     public void setDisplayName(@NotNull String displayName) {
         this.displayName = displayName;
     }
 
+    /**
+     * @return The token of the user.
+     */
     public @NotNull String getToken() {
         return token;
     }
 
+    /**
+     * @param token The token of the user.
+     */
     public void setToken(@NotNull String token) {
         this.token = token;
     }
 
+    /**
+     * @return The hashed password of the user.
+     */
     public byte[] getHashedPassword() {
         return hashedPassword;
     }
 
+    /**
+     * @param hashedPassword The hashed password of the user.
+     */
     public void setHashedPassword(byte[] hashedPassword) {
         this.hashedPassword = hashedPassword;
     }
 
+    /**
+     * @return The salt of the user.
+     */
     public byte[] getSalt() {
         return salt;
     }
 
+    /**
+     * @param salt The salt of the user.
+     */
     public void setSalt(byte[] salt) {
         this.salt = salt;
     }
 
+    /**
+     * @return The role of the user.
+     */
     public @NotNull Role getRole() {
         return role;
     }
 
+    /**
+     * @param role The role of the user.
+     */
     public void setRole(@NotNull Role role) {
         this.role = role;
     }
 
+    /**
+     * @return The permissions of the user.
+     */
     public @NotNull String getPermissions() {
         return permissions;
     }
 
+    /**
+     * @param permissions The permissions of the user.
+     */
     public void setPermissions(@NotNull String permissions) {
         this.permissions = permissions;
     }
 
+    /**
+     * @return The permissions of the user.
+     */
     public Collection<Permission> getPermissionsList() {
         if (this.permissionsList == null) {
             try {
@@ -179,21 +233,19 @@ public class UserEntity {
         return permissionsList;
     }
 
+    /**
+     * @param permission The permission to add to the user.
+     */
     public void addPermission(Permission permission) {
         this.permissionsList.add(permission);
         this.permissions = new Gson().toJson(this.permissionsList);
     }
 
+    /**
+     * @param permissionsList The permissions to add to the user.
+     */
     public void setPermissionsList(Collection<Permission> permissionsList) {
         this.permissionsList = permissionsList;
         this.permissions = new Gson().toJson(this.permissionsList);
-    }
-
-    public JsonElement toJson() {
-        JsonElement json = new Gson().toJsonTree(this);
-        json.getAsJsonObject().remove("hashedPassword");
-        json.getAsJsonObject().remove("salt");
-
-        return json;
     }
 }

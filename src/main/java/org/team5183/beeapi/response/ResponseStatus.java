@@ -6,10 +6,17 @@ public enum ResponseStatus {
 
     private final String status;
 
+    /**
+     * Creates a new ResponseStatus with the given status.
+     * @param status The status of the response
+     */
     ResponseStatus(String status) {
         this.status = status;
     }
 
+    /**
+     * @return The status of the response
+     */
     public String getStatus() {
         return status;
     }

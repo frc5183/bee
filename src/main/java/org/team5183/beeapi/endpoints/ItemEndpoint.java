@@ -25,27 +25,27 @@ public class ItemEndpoint extends Endpoint {
     void registerEndpoints() {
         path("/items" , () -> {
             before("*", this::authenticate);
-            get("/all", ItemEndpoint::getAllItems);
+            get("/all", this::getAllItems);
 
             path("/:id", () -> {
-                before("", ItemEndpoint::isItemExist);
+                before("", this::isItemExist);
 
-                get("", ItemEndpoint::getItem);
+                get("", this::getItem);
 
-                delete("", ItemEndpoint::deleteItem);
+                delete("", this::deleteItem);
 
-                patch("", ItemEndpoint::updateItem);
+                patch("", this::updateItem);
 
                 path("/checkout", () -> {
-                    get("/active", ItemEndpoint::getItemActiveCheckout);
+                    get("/active", this::getItemActiveCheckout);
 
-                    get("/all", ItemEndpoint::getAllItemCheckouts);
+                    get("/all", this::getAllItemCheckouts);
                 });
 
-                patch("/checkout", ItemEndpoint::checkoutItem);
+                patch("/checkout", this::checkoutItem);
             });
 
-            post("/return", ItemEndpoint::returnItem);
+            post("/return", this::returnItem);
         });
     }
 
@@ -159,7 +159,7 @@ public class ItemEndpoint extends Endpoint {
         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(item.getCheckoutEntities())));
     }
 
-    private static String checkoutItem(Request req, Response res) {
+    private String checkoutItem(Request req, Response res) {
         before("", Authentication.checkPermission(req, res, Permission.CAN_CHECKOUT_ITEMS));
         ItemEntity item;
         try {
@@ -198,7 +198,7 @@ public class ItemEndpoint extends Endpoint {
         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Checked out Item with ID " + req.params(":id")));
     }
 
-    private static String returnItem(Request req, Response res) {
+    private String returnItem(Request req, Response res) {
         before("", Authentication.checkPermission(req, res, Permission.CAN_RETURN_ITEMS));
         ItemEntity item;
         try {

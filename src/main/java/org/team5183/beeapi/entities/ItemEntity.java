@@ -81,78 +81,135 @@ public class ItemEntity {
         new Gson().fromJson(checkouts, CheckoutEntity[].class);
     }
 
+    /**
+     * @return The ID of the item
+     */
     public @NotNull Long getId() {
         return id;
     }
 
+    /**
+     * @return The name of the item
+     */
     public @NotNull String getName() {
         return name;
     }
 
+    /**
+     * @param name The new name of the item
+     */
     public void setName(@NotNull String name) {
         this.name = name;
     }
 
+    /**
+     * @return The description of the item
+     */
     public @NotNull String getDescription() {
         return description;
     }
 
+    /**
+     * @param description The new description of the item
+     */
     public void setDescription(@NotNull String description) {
         this.description = description;
     }
 
+    /**
+     * @return The URL of the photo of the item
+     */
     public @NotNull String getPhoto() {
         return photo;
     }
 
+    /**
+     * @param photo The new URL of the photo of the item
+     */
     public void setPhoto(@NotNull String photo) {
         this.photo = photo;
     }
 
+    /**
+     * @return The price of the item
+     */
     public @NotNull Double getPrice() {
         return price;
     }
 
+    /**
+     * @param price The new price of the item
+     */
     public void setPrice(@NotNull Double price) {
         this.price = price;
     }
 
+    /**
+     * @return The retailer of the item
+     */
     public @Nullable String getRetailer() {
         return retailer;
     }
 
+    /**
+     * @param retailer The new retailer of the item
+     */
     public void setRetailer(@Nullable String retailer) {
         this.retailer = retailer;
     }
 
+    /**
+     * @return The part number of the item
+     */
     public @Nullable String getPartNumber() {
         return partNumber;
     }
 
+    /**
+     * @param partNumber The new part number of the item
+     */
     public void setPartNumber(@Nullable String partNumber) {
         this.partNumber = partNumber;
     }
 
+    /**
+     * @return The checkout of the item
+     */
     public @Nullable String getCheckout() {
         return checkout;
     }
 
+    /**
+     * @param checkout The new checkout of the item
+     */
     public void setCheckout(@Nullable String checkout) {
         this.checkout = checkout;
     }
 
+    /**
+     * @return The checkouts of the item
+     */
     public @NotNull String getCheckouts() {
         return checkouts;
     }
 
+    /**
+     * @param checkouts The new checkouts of the item
+     */
     public void setCheckouts(@NotNull String checkouts) {
         this.checkouts = checkouts;
     }
 
+    /**
+     * @return The checkout entity of the item
+     */
     public @Nullable CheckoutEntity getCheckoutEntity() {
         return checkoutEntity;
     }
 
+    /**
+     * @param checkoutEntity The new checkout entity of the item
+     */
     public void setCheckoutEntity(@Nullable CheckoutEntity checkoutEntity) {
         this.checkouts = new Gson().toJson(checkoutEntity);
         this.checkoutEntity = checkoutEntity;
@@ -169,31 +226,34 @@ public class ItemEntity {
         }
     }
 
+    /**
+     * @return The checkout entities of the item
+     */
     public @NotNull Collection<CheckoutEntity> getCheckoutEntities() {
         return checkoutEntities;
     }
 
+    /**
+     * @param checkout The checkout entity to add to the item
+     */
     public void addCheckoutEntity(@NotNull CheckoutEntity checkout) {
         this.checkoutEntities.add(checkout);
         this.checkouts = new Gson().toJson(checkoutEntities);
     }
 
+    /**
+     * @param checkout The checkout entity to remove from the item
+     */
     public void removeCheckoutEntity(@NotNull CheckoutEntity checkout) {
         this.checkoutEntities.remove(checkout);
         this.checkouts = new Gson().toJson(checkoutEntities);
     }
 
+    /**
+     * @param checkoutEntities The new checkout entities of the item
+     */
     public void setCheckoutEntities(@NotNull Collection<CheckoutEntity> checkoutEntities) {
         this.checkouts = new Gson().toJson(checkoutEntities);
         this.checkoutEntities = checkoutEntities;
-    }
-
-    public JsonElement toJson() {
-        JsonElement obj = new Gson().toJsonTree(this);
-        obj.getAsJsonObject().remove("checkout");
-        obj.getAsJsonObject().remove("checkouts");
-        obj.getAsJsonObject().remove("checkoutEntity");
-        obj.getAsJsonObject().remove("checkoutEntities");
-        return obj;
     }
 }

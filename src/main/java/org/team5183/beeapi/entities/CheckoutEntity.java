@@ -23,34 +23,58 @@ public class CheckoutEntity {
         this.active = true;
     }
 
+    /**
+     * @return The name of the person who checked out the item
+     */
     public @NotNull String getCheckoutName() {
         return checkoutName;
     }
 
+    /**
+     * @param checkoutName The name of the person who checked out the item
+     */
     public void setCheckoutName(@NotNull String checkoutName) {
         this.checkoutName = checkoutName;
     }
 
+    /**
+     * @return The date the item was checked in milliseconds since epoch
+     */
     public @NotNull Long getCheckoutDate() {
         return checkoutDate;
     }
 
+    /**
+     * @param checkoutDate The date the item was checked in milliseconds since epoch
+     */
     public void setCheckoutDate(@NotNull Long checkoutDate) {
         this.checkoutDate = checkoutDate;
     }
 
+    /**
+     * @return The date the item was returned in milliseconds since epoch
+     */
     public @Nullable Long getReturnDate() {
         return returnDate;
     }
 
+    /**
+     * @param returnDate The date the item was returned in milliseconds since epoch
+     */
     public void setReturnDate(@Nullable Long returnDate) {
         this.returnDate = returnDate;
     }
 
+    /**
+     * @return Whether the item is currently checked out
+     */
     public @NotNull Boolean isActive() {
         return active;
     }
 
+    /**
+     * @param active Whether the item is currently checked out
+     */
     public void setActive(@NotNull Boolean active) {
         this.active = active;
     }

@@ -1,5 +1,8 @@
 package org.team5183.beeapi.constants;
 
+/**
+ * A permission that a user can have.
+ */
 public enum Permission {
     CAN_VIEW_ITEMS,
     CAN_CREATE_ITEMS,
