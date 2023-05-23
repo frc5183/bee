@@ -29,17 +29,6 @@ public class Main {
         ipAddress(System.getenv("IP") != null ? System.getenv("IP") : "localhost");
         port(System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 5050);
 
-
-        before("/*", (request, response) -> {
-            response.type("application/json");
-            logger.info("Received " + request.requestMethod() + " request from " + request.ip() + " for " + request.url());
-        });
-
-        notFound((req, res) -> {
-            res.status(404);
-            return new Gson().toJson(new BasicResponse(ResponseStatus.ERROR, "Not Found"));
-        });
-
         new ItemEndpoint();
         new UserEndpoint();
         new MiscEndpoints();

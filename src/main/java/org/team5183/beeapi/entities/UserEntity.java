@@ -4,6 +4,7 @@ import com.google.gson.*;
 import com.google.gson.annotations.Expose;
 import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
+import com.j256.ormlite.table.DatabaseTable;
 import org.jetbrains.annotations.NotNull;
 import org.team5183.beeapi.authentication.HashPassword;
 import org.team5183.beeapi.authentication.JWTManager;
@@ -17,44 +18,39 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 
-@Entity
-@Table(name = "bee_users")
+@DatabaseTable(tableName = "bee_users")
 public class UserEntity {
-    @SuppressWarnings("NotNullFieldNotInitialized")
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Expose
+    @DatabaseField(generatedId = true)
     private @NotNull Long id;
 
     @Expose
-    @Column(nullable = false)
+    @DatabaseField(canBeNull = false, unique = true)
     private @NotNull String login;
 
     @Expose
-    @Column(nullable = false)
+    @DatabaseField(canBeNull = false, unique = true)
     private @NotNull String email;
 
     @Expose
-    @Column(nullable = false)
+    @DatabaseField(canBeNull = false, unique = true)
     private @NotNull String displayName;
 
-    @Column(nullable = false)
     @DatabaseField(canBeNull = false, dataType = DataType.BYTE_ARRAY)
-    private byte[] hashedPassword;
+    private @NotNull byte[] hashedPassword;
 
-    @Column(nullable = false)
     @DatabaseField(canBeNull = false, dataType = DataType.BYTE_ARRAY)
-    private byte[] salt;
+    private @NotNull byte[] salt;
 
-    @Column(nullable = false)
+    @DatabaseField(canBeNull = false)
     private @NotNull String token;
 
     @Expose
-    @Column(nullable = false)
+    @DatabaseField(canBeNull = false)
     private @NotNull Role role;
 
     @Expose
-    @Column(nullable = false)
+    @DatabaseField(canBeNull = false)
     private @NotNull String permissions;
 
     private transient Collection<Permission> permissionsList;
@@ -162,21 +158,21 @@ public class UserEntity {
     /**
      * @return The hashed password of the user.
      */
-    public byte[] getHashedPassword() {
+    public @NotNull byte[] getHashedPassword() {
         return hashedPassword;
     }
 
     /**
      * @param hashedPassword The hashed password of the user.
      */
-    public void setHashedPassword(byte[] hashedPassword) {
+    public void setHashedPassword(@NotNull byte[] hashedPassword) {
         this.hashedPassword = hashedPassword;
     }
 
     /**
      * @return The salt of the user.
      */
-    public byte[] getSalt() {
+    public @NotNull byte[] getSalt() {
         return salt;
     }
 

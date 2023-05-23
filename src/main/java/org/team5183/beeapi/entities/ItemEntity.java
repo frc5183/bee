@@ -3,6 +3,8 @@ package org.team5183.beeapi.entities;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.annotations.Expose;
+import com.j256.ormlite.field.DatabaseField;
+import com.j256.ormlite.table.DatabaseTable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -10,20 +12,18 @@ import javax.persistence.*;
 import java.util.Collection;
 import java.util.HashSet;
 
-@Entity
-@Table(name = "bee_items")
+@DatabaseTable(tableName = "bee_items")
 public class ItemEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Expose
+    @DatabaseField(generatedId = true)
     private @NotNull Long id;
 
     @Expose
-    @Column(nullable = false)
+    @DatabaseField(canBeNull = false)
     private @NotNull String name;
 
     @Expose
-    @Column(nullable = false)
+    @DatabaseField(canBeNull = false)
     private @NotNull String description;
 
     @Expose
@@ -31,21 +31,21 @@ public class ItemEntity {
     private @NotNull String photo;
 
     @Expose
-    @Column
+    @DatabaseField(canBeNull = false)
     private @NotNull Double price;
 
     @Expose
-    @Column
+    @DatabaseField(canBeNull = true)
     private @Nullable String retailer;
 
     @Expose
-    @Column
+    @DatabaseField(canBeNull = true)
     private @Nullable String partNumber;
 
-    @Column
+    @DatabaseField(canBeNull = true)
     public @Nullable String checkout;
 
-    @Column(nullable = false)
+    @DatabaseField(canBeNull = false)
     public @NotNull String checkouts;
 
     private transient @Nullable CheckoutEntity checkoutEntity;
@@ -77,8 +77,13 @@ public class ItemEntity {
      * This constructor is and should only be used by JPA and ORMLite.
      */
     private ItemEntity() {
+        if (checkouts.isBlank() || checkouts.isEmpty()) {
+            this.checkoutEntities = new HashSet<>();
+        } else {
+            new Gson().fromJson(checkouts, CheckoutEntity[].class);
+        }
+
         new Gson().fromJson(checkout, CheckoutEntity.class);
-        new Gson().fromJson(checkouts, CheckoutEntity[].class);
     }
 
     /**

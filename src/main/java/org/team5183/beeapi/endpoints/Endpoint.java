@@ -66,11 +66,11 @@ public abstract class Endpoint {
     /**
      * Checks if the body isn't empty, responds with a 400 error if this check fails.
      * @param request The request to check
-     * @param response The response to respond with
+     * @param response The response to respond with (unused, just forced by Spark)
      */
     void isBodyEmpty(Request request, Response response) {
         if (request.body() == null || request.body().isEmpty() || request.body().isBlank())
-            respond(response, 400, ResponseStatus.ERROR, "Missing Body");
+            end(400, ResponseStatus.ERROR, "Missing Body");
     }
 
     /**
@@ -84,27 +84,25 @@ public abstract class Endpoint {
         try {
             gson.fromJson(request.body(), clazz);
         } catch (JsonSyntaxException e) {
-            respond(response, 400, ResponseStatus.ERROR, "Invalid Body");
+            end(400, ResponseStatus.ERROR, "Invalid Body");
         }
     }
 
     /**
-     * Halts the request with the given response, status, and response status.
-     * @param response The response to respond with
+     * Halts the request with the given response, status, and response status. Should only be used for errors or unintended responses.
      * @param status The status to respond with
      * @param responseStatus The response status to respond with
      * @see Spark#halt(int, String)
      * @see BasicResponse#BasicResponse(ResponseStatus) 
      * @see ResponseStatus
      */
-    void respond(Response response, int status, ResponseStatus responseStatus) {
+    void end(int status, ResponseStatus responseStatus) {
         halt(status, gson.toJson(new BasicResponse(responseStatus)));
     }
 
 
     /**
-     * Halts the request with the given response, status, response status, and message.
-     * @param response The response to respond with
+     * Halts the request with the given response, status, response status, and message. Should only be used for errors or unintended responses.
      * @param status The status to respond with
      * @param responseStatus The response status to respond with
      * @param message The message to respond with
@@ -112,14 +110,13 @@ public abstract class Endpoint {
      * @see BasicResponse#BasicResponse(ResponseStatus, String)
      * @see ResponseStatus
      */
-    void respond(Response response, int status, ResponseStatus responseStatus, String message) {
+    void end(int status, ResponseStatus responseStatus, String message) {
         halt(status, gson.toJson(new BasicResponse(responseStatus, message)));
     }
 
 
     /**
-     * Halts the request with the given response, status, response status, and data.
-     * @param response The response to respond with
+     * Halts the request with the given response, status, response status, and data. Should only be used for errors or unintended responses.
      * @param status The status to respond with
      * @param responseStatus The response status to respond with
      * @param data The data to respond with
@@ -127,13 +124,12 @@ public abstract class Endpoint {
      * @see BasicResponse#BasicResponse(ResponseStatus, JsonElement)
      * @see ResponseStatus
      */
-    void respond(Response response, int status, ResponseStatus responseStatus, JsonElement data) {
+    void end(int status, ResponseStatus responseStatus, JsonElement data) {
         halt(status, gson.toJson(new BasicResponse(responseStatus, data)));
     }
 
     /**
-     * Halts the request with the given response, status, response status, message, and data.
-     * @param response The response to respond with
+     * Halts the request with the given response, status, response status, message, and data. Should only be used for errors or unintended responses.
      * @param status The status to respond with
      * @param responseStatus The response status to respond with
      * @param message The message to respond with
@@ -142,7 +138,24 @@ public abstract class Endpoint {
      * @see BasicResponse#BasicResponse(ResponseStatus, String, JsonElement)
      * @see ResponseStatus
      */
-    void respond(Response response, int status, ResponseStatus responseStatus, String message, JsonElement data) {
+    void end(int status, ResponseStatus responseStatus, String message, JsonElement data) {
         halt(status, gson.toJson(new BasicResponse(responseStatus, message, data)));
+    }
+
+    /**
+     * Return the token from the request.
+     * @param request The request to get the token from
+     * @return The token from the request without the "Bearer " prefix
+     */
+    String getToken(Request request) {
+        if (request.headers("Authorization") == null || request.headers("Authorization").isEmpty() || request.headers("Authorization").isBlank()) {
+            this.end(401, ResponseStatus.ERROR, "Missing Token");
+        }
+
+        if (!(request.headers("Authorization").startsWith("Bearer "))) {
+            this.end(401, ResponseStatus.ERROR, "Invalid Token");
+        }
+
+        return request.headers("Authorization").replace("Bearer ", "");
     }
 }

@@ -12,7 +12,6 @@ public class CheckoutEntity {
 
     private @NotNull Boolean active;
 
-
     /**
      * @param checkoutName The name of the person who checked out the item
      * @param checkoutDate The date the item was checked in milliseconds since epoch

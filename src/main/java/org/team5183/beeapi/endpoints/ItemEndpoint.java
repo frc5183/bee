@@ -1,5 +1,6 @@
 package org.team5183.beeapi.endpoints;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -10,6 +11,7 @@ import org.team5183.beeapi.middleware.Authentication;
 import org.team5183.beeapi.response.BasicResponse;
 import org.team5183.beeapi.response.ResponseStatus;
 import org.team5183.beeapi.util.Database;
+import spark.Filter;
 import spark.Request;
 import spark.Response;
 
@@ -46,11 +48,13 @@ public class ItemEndpoint extends Endpoint {
             });
 
             post("/return", this::returnItem);
+
+            post("/new", this::newItem);
         });
     }
 
-    private static void isItemExist(Request req, Response res) {
-        if (req.params(":id").equals("all") || req.params(":id").equals("new")) return;
+    private Filter isItemExist(Request req, Response res) {
+        if (req.params(":id").equals("all") || req.params(":id").equals("new")) return null;
 
         if (req.params(":id").isEmpty())
             halt(400, gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Missing ID")));
@@ -68,6 +72,8 @@ public class ItemEndpoint extends Endpoint {
             logger.error(e);
             halt(500, gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error")));
         }
+
+        return null;
     }
 
     private String getAllItems(Request req, Response res) {
@@ -234,4 +240,26 @@ public class ItemEndpoint extends Endpoint {
         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Returned Item with ID " + req.params(":id")));
     }
 
+    private String newItem(Request request, Response response) {
+        before("", Authentication.checkPermission(request, response, Permission.CAN_CREATE_ITEMS));
+        ItemEntity item;
+
+        try {
+            item = gson.fromJson(request.body(), ItemEntity.class);
+        } catch (JsonSyntaxException e) {
+            response.status(400);
+            return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid Body"));
+        }
+
+        try {
+            Database.upsertItemEntity(item);
+        } catch (SQLException e) {
+            logger.debug(e);
+            logger.error(e);
+            response.status(500);
+            return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
+        }
+        response.status(201);
+        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Created item with ID "+ item.getId(), new Gson().toJsonTree(item)));
+    }
 }
