@@ -8,8 +8,8 @@ import org.team5183.beeapi.response.ResponseStatus;
 
 import static spark.Spark.*;
 
-public class MiscEndpoints extends Endpoint {
-    private static final Logger logger = LogManager.getLogger(MiscEndpoints.class);
+public class MiscEndpoint extends Endpoint {
+    private static final Logger logger = LogManager.getLogger(MiscEndpoint.class);
     @Override
     void registerEndpoints() {
         get("/", (request, response) -> {

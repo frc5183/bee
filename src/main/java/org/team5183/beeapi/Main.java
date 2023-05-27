@@ -1,19 +1,13 @@
 package org.team5183.beeapi;
 
-import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.team5183.beeapi.endpoints.ItemEndpoint;
-import org.team5183.beeapi.endpoints.MiscEndpoints;
+import org.team5183.beeapi.endpoints.MiscEndpoint;
 import org.team5183.beeapi.endpoints.UserEndpoint;
-import org.team5183.beeapi.entities.CheckoutEntity;
-import org.team5183.beeapi.entities.ItemEntity;
-import org.team5183.beeapi.response.BasicResponse;
-import org.team5183.beeapi.response.ResponseStatus;
 import org.team5183.beeapi.util.Database;
 
 import java.sql.SQLException;
-import java.time.Instant;
 
 import static spark.Spark.*;
 
@@ -31,7 +25,7 @@ public class Main {
 
         new ItemEndpoint();
         new UserEndpoint();
-        new MiscEndpoints();
+        new MiscEndpoint();
 
         Database.init();
     }

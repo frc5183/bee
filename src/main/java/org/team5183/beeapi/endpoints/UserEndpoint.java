@@ -92,34 +92,22 @@ public class UserEndpoint extends Endpoint {
                 }
 
                 String token = JWTManager.generateToken();
-                UserEntity ue = new UserEntity(login, password, token, email, displayName, Role.USER);
+                UserEntity user = new UserEntity(login, password, token, email, displayName, Role.USER);
 
                 try {
-                    Database.upsertUserEntity(ue);
+                    Database.upsertUserEntity(user);
                 } catch (SQLException e) {
                     logger.error(e);
                     res.status(500);
                     return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
                 }
 
-                return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Created new user with ID " + ue.getId(), ue.toJson()));
+                return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Created new user with ID " + user.getId(), gson.toJsonTree(user)));
             });
 
             post("/login", (req, res) -> {
-                before("", this::isBodyEmpty);
-
-                JsonObject login = null;
-                try {
-                    login = gson.fromJson(req.body(), JsonObject.class);
-                } catch (JsonSyntaxException e) {
-                    res.status(400);
-                    return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid Body"));
-                }
-
-                if (login == null) {
-                    res.status(400);
-                    return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid Body"));
-                }
+                JsonObject login = jsonFromBody(req);
+                assert login != null;
 
                 if (login.has("login") && login.has("email")) {
                     res.status(400);
@@ -196,7 +184,6 @@ public class UserEndpoint extends Endpoint {
                 });
 
                 patch("/changePassword", (req, res) -> {
-                    before("", this::isBodyEmpty);
 
                     JsonObject changePassword = null;
                     try {
@@ -250,7 +237,6 @@ public class UserEndpoint extends Endpoint {
                 });
 
                 patch("/update", (req, res) -> {
-                    before("", this::isBodyEmpty);
 
                     JsonObject update = null;
                     try {
