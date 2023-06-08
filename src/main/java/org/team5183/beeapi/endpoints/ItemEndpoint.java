@@ -17,6 +17,7 @@ import spark.Response;
 
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.List;
 
 import static spark.Spark.*;
 
@@ -28,6 +29,7 @@ public class ItemEndpoint extends Endpoint {
         path("/items" , () -> {
             before("*", this::authenticate);
             get("/all", this::getAllItems);
+            get("/all?limit=:limit", this::getAllItems);
 
             path("/:id", () -> {
                 before("", this::isItemExist);
@@ -89,6 +91,19 @@ public class ItemEndpoint extends Endpoint {
 
     private String getAllItems(Request req, Response res) {
         before("", this.checkPermission(req, res, Permission.CAN_VIEW_ITEMS));
+        if (req.params(":limit") != null && !req.params(":limit").isEmpty()) {
+            try {
+                List<ItemEntity> items = Database.getAllItemEntities();
+                for (int i = 0; i < items.size(); i++) {
+                    if (i >= Integer.parseInt(req.params(":limit"))) {
+                        items.remove(i);
+                    }
+                }
+                return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(items)));
+            } catch (SQLException e) {
+                end(500, ResponseStatus.ERROR, "Internal Server Error");
+            }
+        }
         try {
             return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(Database.getAllItemEntities())));
         } catch (SQLException e) {
@@ -123,6 +138,7 @@ public class ItemEndpoint extends Endpoint {
             Database.upsertItemEntity(item);
         } catch (SQLException e) {
             res.status(500);
+
             return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
         }
 
