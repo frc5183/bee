@@ -30,6 +30,5 @@ jobs:
     - name: Build & publish the Docker image
       run: |
         docker build . --file Dockerfile --tag ghcr.io/frc5183/beeapi:latest
-        docker run ghcr.io/frc5183/beeapi:latest
         docker push ghcr.io/frc5183/beeapi:latest
     
