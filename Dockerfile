@@ -1,4 +1,4 @@
-FROM gradle:17 as BUILD
+FROM gradle:jdk17 as BUILD
 WORKDIR /build
 COPY --chown=gradle:gradle src /build/src
 COPY --chown=gradle:gradle build.gradle settings.gradle /build
