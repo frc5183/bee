@@ -1,10 +1,11 @@
+FROM gradle:17 as BUILD
+WORKDIR /build
+COPY --chown gradle:gradle src /build/src
+COPY --chown gradle:gradle build.gradle settings.gradle /build
+RUN gradle --no-daemon shadowJar
+
 FROM openjdk:17-slim
-RUN mkdir /app
-COPY . /app
 WORKDIR /app
-RUN ./gradlew shadowJar
-RUN mkdir /app/work
-COPY ./build/libs/beeapi.jar /app/work
-WORKDIR /app/work
-CMD ["java", "-jar", "./beeapi.jar"]
+COPY --from=BUILD /build/build/libs/beeapi.jar beeapi.jar
+ENTRYPOINT java -jar beeapi.jar
 EXPOSE 5050
