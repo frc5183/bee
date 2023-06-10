@@ -59,7 +59,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: latest
+        tags: frc5183/beeapi:latest
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
