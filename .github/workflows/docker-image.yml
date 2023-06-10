@@ -11,6 +11,7 @@ on:
       - 'gradlew.bat'
       - 'settings.gradle'
       - 'src/**'
+      - '.github/workflows/*'
 
 jobs:
   build:
@@ -26,7 +27,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
         
-    - name: Build the Docker image
+    - name: Build & publish the Docker image
       run: |
         docker build . --file Dockerfile --tag ghcr.io/frc5183/beeapi:latest
         docker run ghcr.io/frc5183/beeapi:latest
