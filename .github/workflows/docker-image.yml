@@ -3,15 +3,28 @@ name: Docker Image CI
 on:
   push:
     branches: [ "master" ]
+    paths:
+      - 'Dockerfile'
+      - 'build.gradle'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - 'settings.gradle'
+      - 'src/**'
   pull_request:
     branches: [ "master" ]
+    paths:
+      - 'Dockerfile'
+      - 'build.gradle'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - 'settings.gradle'
+      - 'src/**'
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
     - name: Build the Docker image
