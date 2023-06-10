@@ -1,9 +1,10 @@
 FROM openjdk:17-slim
+RUN mkdir /app
+COPY . /app
 WORKDIR /app
-COPY . .
 RUN ./gradlew shadowJar
-RUN mkdir work
-COPY ./build/libs/beeapi.jar /app
+RUN mkdir /app/work
+COPY ./build/libs/beeapi.jar /app/work
 WORKDIR /app/work
-CMD ["java", "-jar", "../beeapi.jar"]
+CMD ["java", "-jar", "./beeapi.jar"]
 EXPOSE 5050
