@@ -1,7 +1,5 @@
 package org.team5183.beeapi.endpoints;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.team5183.beeapi.constants.Permission;
@@ -10,13 +8,13 @@ import org.team5183.beeapi.entities.ItemEntity;
 import org.team5183.beeapi.middleware.Authentication;
 import org.team5183.beeapi.response.BasicResponse;
 import org.team5183.beeapi.response.ResponseStatus;
-import org.team5183.beeapi.util.Database;
 import spark.Filter;
 import spark.Request;
 import spark.Response;
 
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 import static spark.Spark.*;
@@ -25,7 +23,7 @@ public class ItemEndpoint extends Endpoint {
     private static final Logger logger = LogManager.getLogger(ItemEndpoint.class);
 
     @Override
-    void registerEndpoints() {
+    public void registerEndpoints() {
         path("/items" , () -> {
             before("*", this::authenticate);
             get("/all", this::getAllItems);
@@ -38,7 +36,7 @@ public class ItemEndpoint extends Endpoint {
 
                 delete("", this::deleteItem);
 
-                patch("", this::updateItem);
+                patch("", "application/json", this::updateItem);
 
                 path("/checkout", () -> {
                     get("/active", this::getItemActiveCheckout);
@@ -50,7 +48,7 @@ public class ItemEndpoint extends Endpoint {
                 patch("/return", this::returnItem);
             });
 
-            post("/new", this::newItem);
+            post("/new", "application/json", this::newItem);
         });
     }
 
@@ -69,7 +67,7 @@ public class ItemEndpoint extends Endpoint {
             if (Database.getItemEntity(Long.parseLong(req.params(":id"))) == null)
                 end(404, ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " not found");
         } catch (SQLException e) {
-            logger.error(e);
+            e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
 
@@ -82,7 +80,7 @@ public class ItemEndpoint extends Endpoint {
         try {
             return Database.getItemEntity(Long.parseLong(req.params(":id")));
         } catch (SQLException e) {
-            logger.error(e);
+            e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
 
@@ -91,25 +89,28 @@ public class ItemEndpoint extends Endpoint {
 
     private String getAllItems(Request req, Response res) {
         before("", this.checkPermission(req, res, Permission.CAN_VIEW_ITEMS));
-        if (req.params(":limit") != null && !req.params(":limit").isEmpty()) {
-            try {
-                List<ItemEntity> items = Database.getAllItemEntities();
-                for (int i = 0; i < items.size(); i++) {
-                    if (i >= Integer.parseInt(req.params(":limit"))) {
-                        items.remove(i);
-                    }
-                }
-                return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(items)));
-            } catch (SQLException e) {
-                end(500, ResponseStatus.ERROR, "Internal Server Error");
-            }
-        }
+
+        List<ItemEntity> items = null;
         try {
-            return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(Database.getAllItemEntities())));
+            items = Database.getAllItemEntities();
         } catch (SQLException e) {
+            e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
-        return null;
+        if (items == null) end(200, ResponseStatus.SUCCESS, gson.toJsonTree(items));
+        assert items != null;
+
+        if (req.params(":limit") != null && !req.params(":limit").isEmpty()) {
+            List<ItemEntity> itemsCopy = new ArrayList<>(Integer.parseInt(req.params(":limit")));
+            for (int i = 0; i < items.size(); i++) {
+                itemsCopy.add(items.get(i));
+                if (i >= Integer.parseInt(req.params(":limit"))) {
+                    break;
+                }
+            }
+            return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(itemsCopy)));
+        }
+        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(items)));
     }
 
     private String endpointGetItem(Request req, Response res) {
@@ -123,7 +124,7 @@ public class ItemEndpoint extends Endpoint {
         try {
             Database.deleteItemEntity(Database.getItemEntity(Long.parseLong(req.params(":id"))));
         } catch (SQLException e) {
-            logger.error(e);
+            e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
 
@@ -132,14 +133,14 @@ public class ItemEndpoint extends Endpoint {
 
     private String updateItem(Request req, Response res) {
         before("", this.checkPermission(req, res, Permission.CAN_EDIT_ITEMS));
+        before("", this::isItemExist);
         ItemEntity item = this.objectFromBody(req, ItemEntity.class);
 
         try {
             Database.upsertItemEntity(item);
         } catch (SQLException e) {
-            res.status(500);
-
-            return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
+            e.printStackTrace();
+            end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
 
         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Updated Item with ID " + req.params(":id"), gson.toJsonTree(item)));
@@ -151,8 +152,7 @@ public class ItemEndpoint extends Endpoint {
         assert item != null;
 
         if (item.getCheckoutEntity() == null) {
-            res.status(404);
-            return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " is not checked out"));
+            end(404, ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " is not checked out");
         }
 
         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(item.getCheckoutEntity())));
@@ -216,12 +216,13 @@ public class ItemEndpoint extends Endpoint {
     private String newItem(Request request, Response response) {
         before("", Authentication.checkPermission(request, response, Permission.CAN_CREATE_ITEMS));
         ItemEntity item = this.objectFromBody(request, ItemEntity.class);
+
         assert item != null;
 
         try {
             Database.upsertItemEntity(item);
         } catch (SQLException e) {
-            logger.error(e);
+            e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
 

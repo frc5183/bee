@@ -1,10 +1,16 @@
 package org.team5183.beeapi.response;
 
 import com.google.gson.JsonElement;
+import com.google.gson.annotations.Expose;
 
 public class BasicResponse {
+    @Expose
     public final ResponseStatus status;
+
+    @Expose
     public String message;
+
+    @Expose
     public JsonElement data;
 
     /**

@@ -1,9 +1,10 @@
 package org.team5183.beeapi.endpoints;
 
 import com.google.gson.*;
-import com.google.gson.internal.Primitives;
+import org.jetbrains.annotations.NotNull;
 import org.team5183.beeapi.constants.Permission;
 import org.team5183.beeapi.constants.Role;
+import org.team5183.beeapi.entities.UserEntity;
 import org.team5183.beeapi.middleware.Authentication;
 import org.team5183.beeapi.response.BasicResponse;
 import org.team5183.beeapi.response.ResponseStatus;
@@ -12,8 +13,8 @@ import spark.Request;
 import spark.Response;
 import spark.Spark;
 
-import java.io.Reader;
 import java.lang.reflect.Type;
+import java.sql.SQLException;
 
 import static spark.Spark.halt;
 
@@ -21,16 +22,9 @@ public abstract class Endpoint {
     static final Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
 
     /**
-     * Creates a new endpoint and registers all endpoints for the given endpoint.
-     */
-    public Endpoint() {
-        registerEndpoints();
-    }
-
-    /**
      * Registers all endpoints for the given endpoint.
      */
-    abstract void registerEndpoints();
+    public abstract void registerEndpoints();
 
     /**
      * @param request The request to respond to
@@ -38,7 +32,7 @@ public abstract class Endpoint {
      * @see Endpoint#objectFromBody(Request, Class)
      * @see Gson#fromJson(String, Class)
      */
-    JsonObject jsonFromBody(Request request) {
+    @NotNull JsonObject jsonFromBody(Request request) {
         isBodyEmpty(request);
 
         JsonObject json = null;
@@ -52,6 +46,7 @@ public abstract class Endpoint {
             end(400, ResponseStatus.ERROR, "Invalid Body");
         }
 
+        assert json != null;
         return json;
     }
 
@@ -66,7 +61,7 @@ public abstract class Endpoint {
     <T> T objectFromBody(Request request,  Class<T> clazz) {
         T object = null;
         try {
-            object = Primitives.wrap(clazz).cast(gson.fromJson(request.body(), (Type) clazz));
+            object = gson.fromJson(request.body(), (Type) clazz);
         } catch (JsonSyntaxException e) {
             end(400, ResponseStatus.ERROR, "Invalid Body");
         }
@@ -188,5 +183,24 @@ public abstract class Endpoint {
         }
 
         return request.headers("Authorization").replace("Bearer ", "");
+    }
+
+    @NotNull
+    UserEntity getUserByToken(Request request, Response response) {
+        String token = getToken(request);
+
+        authenticate(request, response);
+
+        UserEntity user = null;
+        try {
+            user = UserEntity.getUserEntityByToken(token);
+        } catch (SQLException e) {
+            end(500, ResponseStatus.ERROR, "Internal Server Error");
+        }
+
+        if (user == null) end(500, ResponseStatus.ERROR, "Internal Server Error");
+        assert user != null;
+
+        return user;
     }
 }

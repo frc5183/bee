@@ -13,7 +13,6 @@ import org.team5183.beeapi.constants.Role;
 import org.team5183.beeapi.entities.UserEntity;
 import org.team5183.beeapi.response.BasicResponse;
 import org.team5183.beeapi.response.ResponseStatus;
-import org.team5183.beeapi.util.Database;
 import spark.Filter;
 import spark.Request;
 import spark.Response;
@@ -79,7 +78,6 @@ public class Authentication {
         try {
             UserEntity user = Database.getUserEntityByToken(token);
             assert user != null;
-            logger.info(user.getRole());
             if (!(user.getPermissionsList().contains(permission)) && !((user.getRole().equals(Role.ADMIN)))) halt(403, new Gson().toJson(new BasicResponse(ResponseStatus.ERROR, "Insufficient Permissions")));
         } catch (SQLException e) {
             halt(500, new Gson().toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error")));

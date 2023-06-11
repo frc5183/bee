@@ -6,17 +6,21 @@ import com.j256.ormlite.field.DataType;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.team5183.beeapi.authentication.HashPassword;
 import org.team5183.beeapi.authentication.JWTManager;
 import org.team5183.beeapi.constants.Permission;
 import org.team5183.beeapi.constants.Role;
+import org.team5183.beeapi.runnables.DatabaseRequestRunnable;
 
-import javax.persistence.*;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.ArrayList;
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 @DatabaseTable(tableName = "bee_users")
 public class UserEntity {
@@ -33,7 +37,7 @@ public class UserEntity {
     private @NotNull String email;
 
     @Expose
-    @DatabaseField(canBeNull = false, unique = true)
+    @DatabaseField(canBeNull = false)
     private @NotNull String displayName;
 
     @DatabaseField(canBeNull = false, dataType = DataType.BYTE_ARRAY)
@@ -64,11 +68,11 @@ public class UserEntity {
      * @throws NoSuchAlgorithmException
      * @throws InvalidKeySpecException
      */
-    public UserEntity(@NotNull String login, @NotNull String password, @NotNull String token,  @NotNull String email, @NotNull String displayName, @NotNull Role role) throws NoSuchAlgorithmException, InvalidKeySpecException {
+    public UserEntity(@NotNull String login, @NotNull String password, @NotNull String email, @NotNull String displayName, @NotNull Role role) throws NoSuchAlgorithmException, InvalidKeySpecException {
         this.login = login;
         this.email = email;
         this.displayName = displayName;
-        this.token = token;
+        this.token = JWTManager.generateToken();
         byte[][] saltedPassword = HashPassword.generateSaltedHashedPassword(password);
         this.salt = saltedPassword[0];
         this.hashedPassword = saltedPassword[1];
@@ -90,6 +94,139 @@ public class UserEntity {
 //        } catch (JsonSyntaxException e) {
 //            this.permissionsList = new HashSet<>();
 //        }
+    }
+
+    /**
+     * Gets the user with the specified ID.
+     * @param id The ID of the user.
+     * @return The user with the specified ID, or null if no user exists with that ID.
+     * @throws SQLException If an error occurs while querying the database.
+     */
+    @Nullable
+    public static UserEntity getUserEntity(long id) throws SQLException {
+        CompletableFuture<UserEntity> future = DatabaseRequestRunnable.userQuery(DatabaseRequestRunnable.getUserDao().queryBuilder().where().eq("id", id).prepare());
+        AtomicReference<UserEntity> userEntity = new AtomicReference<>();
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+        future.whenComplete((ue, t) -> {
+            throwable.set(t);
+            userEntity.set(ue);
+        });
+
+        if (throwable.get() != null) {
+            throw new SQLException(throwable.get());
+        }
+
+        return userEntity.get();
+    }
+
+    /**
+     * Gets the user with the specified login.
+     * @param login The login (username) of the user.
+     * @return The user with the specified login, or null if no user exists with that login.
+     * @throws SQLException If an error occurs while querying the database.
+     */
+    @Nullable
+    public static UserEntity getUserEntityByLogin(String login) throws SQLException {
+        CompletableFuture<UserEntity> future = DatabaseRequestRunnable.userQuery(DatabaseRequestRunnable.getUserDao().queryBuilder().where().eq("login", login).prepare());
+        AtomicReference<UserEntity> userEntity = new AtomicReference<>();
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+        future.whenComplete((ue, t) -> {
+            throwable.set(t);
+            userEntity.set(ue);
+        });
+
+        if (throwable.get() != null) {
+            throw new SQLException(throwable.get());
+        }
+
+        return userEntity.get();
+    }
+
+    public static List<UserEntity> getAllUserEntities() throws SQLException {
+        CompletableFuture<List<UserEntity>> future = DatabaseRequestRunnable.userQueryMultiple(DatabaseRequestRunnable.getUserDao().queryBuilder().prepare());
+        AtomicReference<List<UserEntity>> userEntities = new AtomicReference<>();
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+        future.whenComplete((ue, t) -> {
+            throwable.set(t);
+            userEntities.set(ue);
+        });
+
+        if (throwable.get() != null) {
+            throw new SQLException(throwable.get());
+        }
+
+        return userEntities.get();
+    }
+
+    /**
+     * Gets the user with the specified email.
+     * @param email The email of the user.
+     * @return The user with the specified email, or null if no user exists with that email.
+     * @throws SQLException If an error occurs while querying the database.
+     */
+    @Nullable
+    public static UserEntity getUserEntityByEmail(String email) throws SQLException {
+        CompletableFuture<UserEntity> future = DatabaseRequestRunnable.userQuery(DatabaseRequestRunnable.getUserDao().queryBuilder().where().eq("email", email).prepare());
+        AtomicReference<UserEntity> userEntity = new AtomicReference<>();
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+        future.whenComplete((ue, t) -> {
+            throwable.set(t);
+            userEntity.set(ue);
+        });
+
+        if (throwable.get() != null) {
+            throw new SQLException(throwable.get());
+        }
+
+        return userEntity.get();
+    }
+
+    /**
+     * Gets the user with the specified token
+     * @param @token The token of the user.
+     * @return The user with the specified token, or null if no user exists with that token.
+     * @throws SQLException If an error occurs while querying the database.
+     */
+    @Nullable
+    public static UserEntity getUserEntityByToken(String token) throws SQLException {
+        CompletableFuture<UserEntity> future = DatabaseRequestRunnable.userQuery(DatabaseRequestRunnable.getUserDao().queryBuilder().where().eq("token", token).prepare());
+        AtomicReference<UserEntity> userEntity = new AtomicReference<>();
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+        future.whenComplete((ue, t) -> {
+            throwable.set(t);
+            userEntity.set(ue);
+        });
+
+        if (throwable.get() != null) {
+            throw new SQLException(throwable.get());
+        }
+
+        return userEntity.get();
+    }
+
+    /**
+     * Creates the user in the database.
+     * TODO: make this not like this, allow it to actually run through the database request runnable's cache instead of just forcing synchronization bc
+     * @throws SQLException If an error occurs while creating the user in the database.
+     */
+    public synchronized void create() throws SQLException {
+        DatabaseRequestRunnable.getUserDao().createOrUpdate(this);
+    }
+
+    /**
+     * Updates the user in the database.
+     * @throws SQLException If an error occurs while updating the user in the database.
+     */
+    public void update() throws SQLException {
+        DatabaseRequestRunnable.userStatement(DatabaseRequestRunnable.getUserDao().updateBuilder().where().eq("id", this.id).prepare());
+    }
+
+    /**
+     * Deletes the user from the database.
+     * @throws SQLException If an error occurs while deleting the user from the database.
+     */
+    public void delete() throws SQLException {
+        DatabaseRequestRunnable.userStatement(DatabaseRequestRunnable.getUserDao().deleteBuilder().where().eq("id", this.id).prepare());
     }
 
     /**

@@ -10,22 +10,19 @@ import static spark.Spark.*;
 
 public class MiscEndpoint extends Endpoint {
     private static final Logger logger = LogManager.getLogger(MiscEndpoint.class);
+
     @Override
-    void registerEndpoints() {
+    public void registerEndpoints() {
         get("/", (request, response) -> {
             response.type("text/html");
             return "<h1>Bee API</h1><p>An API for the Bee Inventory Management System</p><p>Created by <a href=\"https://github.com/frc5183\">Team 5183</a></p>";
         });
+
         get("/status", (request, response) -> gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "OK")));
 
         before("/*", (request, response) -> {
             response.type("application/json");
             logger.info("Received " + request.requestMethod() + " request from " + request.ip() + " for " + request.url());
-        });
-
-        after("/*", (request, response) -> {
-            if (request.headers("Content-Encoding").equals("gzip"))
-                response.header("Content-Encoding", "gzip");
         });
 
         notFound((req, res) -> {
@@ -34,7 +31,8 @@ public class MiscEndpoint extends Endpoint {
         });
 
         internalServerError((req, res) -> {
-            logger.error("Internal server error.\nRequest IP = " + req.ip() + "\nRequest URL = " + req.url() + "\nRequest body = " + req.body() + "\nRequest headers" + req.headers() + "\nResponse body = " + res.body());
+            logger.error("Internal server error.\nRequest IP = " + req.ip() + "\nRequest URL = " + req.url() + "\nRequest body = <censored>" + "\nRequest headers = <censored>" + "\nResponse body = <censored>");
+            res.status(500);
             return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal server error"));
         });
     }
