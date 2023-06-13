@@ -14,7 +14,7 @@ import java.util.HashSet;
 
 @DatabaseTable(tableName = "bee_items")
 public class ItemEntity {
-    @Expose
+    @Expose(serialize = true, deserialize = false)
     @DatabaseField(generatedId = true)
     private @NotNull Long id;
 
@@ -36,11 +36,11 @@ public class ItemEntity {
 
     @Expose
     @DatabaseField(canBeNull = true)
-    private @Nullable String retailer;
+    private @NotNull String retailer;
 
     @Expose
     @DatabaseField(canBeNull = true)
-    private @Nullable String partNumber;
+    private @NotNull String partNumber;
 
     @DatabaseField(canBeNull = true)
     public @Nullable String checkout;
@@ -66,8 +66,8 @@ public class ItemEntity {
         this.description = description;
         this.photo = photo;
         this.price = price;
-        this.retailer = retailer;
-        this.partNumber = partNumber;
+        this.retailer = retailer == null ? "" : retailer;
+        this.partNumber = partNumber == null ? "" : partNumber;
         this.checkoutEntities = new HashSet<>();
         this.checkouts = new Gson().toJson(checkoutEntities);
     }

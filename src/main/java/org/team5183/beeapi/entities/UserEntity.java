@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @DatabaseTable(tableName = "bee_users")
 public class UserEntity {
-    @Expose
+    @Expose(serialize = true, deserialize = false)
     @DatabaseField(generatedId = true)
     private @NotNull Long id;
 
@@ -65,8 +65,8 @@ public class UserEntity {
      * @param displayName The display name of the user, used for displaying the user's name.
      * @param password The password of the user, will be hashed and salted during construction.
      * @param role The role of the user, used for determining permissions.
-     * @throws NoSuchAlgorithmException
-     * @throws InvalidKeySpecException
+     * @throws NoSuchAlgorithmException If the hashing algorithm is not found.
+     * @throws InvalidKeySpecException If the key spec is invalid.
      */
     public UserEntity(@NotNull String login, @NotNull String password, @NotNull String email, @NotNull String displayName, @NotNull Role role) throws NoSuchAlgorithmException, InvalidKeySpecException {
         this.login = login;
