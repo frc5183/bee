@@ -7,5 +7,6 @@ RUN gradle --no-daemon shadowJar
 FROM openjdk:17-slim
 WORKDIR /app
 COPY --from=BUILD /build/build/libs/beeapi.jar beeapi.jar
-ENTRYPOINT java -jar beeapi.jar
+WORKDIR /app/work
+ENTRYPOINT java -jar /app/beeapi.jar
 EXPOSE 5050
