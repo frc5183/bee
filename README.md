@@ -11,3 +11,4 @@ Click the most recent workflow run and download BeeAPI.jar found in the artifact
 - [ ] Full Multithreading
 - [ ] Allow administrators to modify, add, remove users.
 - [ ] Test everything and make sure it actually works.
+- [X] Add offset to inventory items.

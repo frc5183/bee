@@ -28,6 +28,8 @@ public class ItemEndpoint extends Endpoint {
             before("*", this::authenticate);
             get("/all", this::getAllItems);
             get("/all?limit=:limit", this::getAllItems);
+            get("/all?offset=:offset", this::getAllItems);
+            get("/all?limit=:limit&offset=:offset", this::getAllItems);
 
             path("/:id", () -> {
                 before("", this::isItemExist);
@@ -99,6 +101,9 @@ public class ItemEndpoint extends Endpoint {
         }
         if (items == null) end(200, ResponseStatus.SUCCESS, gson.toJsonTree(items));
         assert items != null;
+
+        // TODO: add a method to call offset or limit directly?
+        if (req.params(":offset") != null && !req.params(":offset").isEmpty()) items = items.subList(Integer.parseInt(req.params(":offset")), items.size());
 
         if (req.params(":limit") != null && !req.params(":limit").isEmpty()) {
             List<ItemEntity> itemsCopy = new ArrayList<>(Integer.parseInt(req.params(":limit")));
