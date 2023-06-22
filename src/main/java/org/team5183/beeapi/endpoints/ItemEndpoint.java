@@ -26,7 +26,7 @@ public class ItemEndpoint extends Endpoint {
         path("/items" , () -> {
             before("*", Authentication::authenticate);
             get("/all", (req, res) -> {
-                before("", Authentication.checkPermission(req, res, Permission.CAN_VIEW_ITEMS));
+//                before("", Authentication.checkPermission(req, res, Permission.CAN_VIEW_ITEMS));
                 try {
                     return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(Database.getAllItemEntities())));
                 } catch (SQLException e) {
@@ -63,7 +63,7 @@ public class ItemEndpoint extends Endpoint {
                 });
 
                 get("", (req, res) -> {
-                    before("", Authentication.checkPermission(req, res, Permission.CAN_VIEW_ITEMS));
+//                    before("", Authentication.checkPermission(req, res, Permission.CAN_VIEW_ITEMS));
                     try {
                         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(Database.getItemEntity(Long.parseLong(req.params(":id"))))));
                     } catch (SQLException e) {
@@ -74,7 +74,7 @@ public class ItemEndpoint extends Endpoint {
                 });
 
                 delete("", (req, res) -> {
-                    before("", Authentication.checkPermission(req, res, Permission.CAN_DELETE_ITEMS));
+//                    before("", Authentication.checkPermission(req, res, Permission.CAN_DELETE_ITEMS));
                     try {
                         Database.deleteItemEntity(Database.getItemEntity(Long.parseLong(req.params(":id"))));
                     } catch (SQLException e) {
@@ -87,7 +87,7 @@ public class ItemEndpoint extends Endpoint {
                 });
 
                 patch("", (req, res) -> {
-                    before("", Authentication.checkPermission(req, res, Permission.CAN_EDIT_ITEMS));
+//                    before("", Authentication.checkPermission(req, res, Permission.CAN_EDIT_ITEMS));
                     ItemEntity item;
                     try {
                         item = gson.fromJson(req.body(), ItemEntity.class);
@@ -108,7 +108,7 @@ public class ItemEndpoint extends Endpoint {
 
                 path("/checkout", () -> {
                     get("/active", (req, res) -> {
-                        before("", Authentication.checkPermission(req, res, Permission.CAN_VIEW_CHECKOUTS));
+//                        before("", Authentication.checkPermission(req, res, Permission.CAN_VIEW_CHECKOUTS));
                         ItemEntity item;
                         try {
                             item = Database.getItemEntity(Long.parseLong(req.params(":id")));
@@ -128,7 +128,7 @@ public class ItemEndpoint extends Endpoint {
                     });
 
                     get("/all", (req, res) -> {
-                        before("", Authentication.checkPermission(req, res, Permission.CAN_VIEW_CHECKOUTS));
+//                        before("", Authentication.checkPermission(req, res, Permission.CAN_VIEW_CHECKOUTS));
                         ItemEntity item;
                         try {
                             item = Database.getItemEntity(Long.parseLong(req.params(":id")));
@@ -143,7 +143,7 @@ public class ItemEndpoint extends Endpoint {
                 });
 
                 patch("/checkout", (req, res) -> {
-                    before("", Authentication.checkPermission(req, res, Permission.CAN_CHECKOUT_ITEMS));
+//                    before("", Authentication.checkPermission(req, res, Permission.CAN_CHECKOUT_ITEMS));
                     ItemEntity item;
                     try {
                         item = Database.getItemEntity(Long.parseLong(req.params(":id")));
@@ -184,7 +184,7 @@ public class ItemEndpoint extends Endpoint {
 
             post("/return", (req, res) -> {
                // set checkout entity to null and get current entity and set active to false
-                before("", Authentication.checkPermission(req, res, Permission.CAN_RETURN_ITEMS));
+//                before("", Authentication.checkPermission(req, res, Permission.CAN_RETURN_ITEMS));
                 ItemEntity item;
                 try {
                     item = Database.getItemEntity(Long.parseLong(req.params(":id")));
