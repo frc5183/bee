@@ -30,7 +30,7 @@ public class UserEndpoint extends Endpoint {
     public void registerEndpoints() {
         //todo allow admin to get all users and basically call /me on all users just w/o the token and its just an id instead of /me
         path("/users", () -> {
-            post("/register", this::registerUser);
+            put("/register", this::registerUser);
 
             post("/login", this::loginUser);
 
@@ -49,7 +49,7 @@ public class UserEndpoint extends Endpoint {
             });
 
             path("/me", () -> {
-//                before(Authentication::authenticate);
+                before(Authentication::authenticate);
 
                 get("", this::getSelfUser);
 
@@ -147,7 +147,7 @@ public class UserEndpoint extends Endpoint {
         assert user != null;
 
         try {
-            user.update();
+            user.create();
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");

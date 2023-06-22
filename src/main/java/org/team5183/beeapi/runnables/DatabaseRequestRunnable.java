@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 
+// todo: make this better (im sure it doesnt even work right but i haven't really tested)
 public class DatabaseRequestRunnable extends EndableRunnable {
     private static Logger logger = LogManager.getLogger(DatabaseRequestRunnable.class);
 
@@ -77,14 +78,6 @@ public class DatabaseRequestRunnable extends EndableRunnable {
                 for (int i = 0; i < userCache.size(); i++)
                     dumpUserCache(userCache.poll());
             } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-
-            // Wait 5 minutes and loop again.
-            try {
-                wait(5000);
-                //wait(1000 * 60 * 5);
-            } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
