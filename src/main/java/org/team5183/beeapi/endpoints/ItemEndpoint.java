@@ -44,6 +44,12 @@ public class ItemEndpoint extends Endpoint {
                     get("/active", this::getItemActiveCheckout);
 
                     get("/all", this::getAllItemCheckouts);
+
+                    path("/:checkoutId", () -> {
+                        get("", this::getItemCheckout);
+//                        patch("", this::updateItemCheckout);
+//                        delete("", this::deleteItemCheckout);
+                    });
                 });
 
                 post("/checkout", this::checkoutItem);
@@ -66,7 +72,7 @@ public class ItemEndpoint extends Endpoint {
         }
 
         try {
-            if (Database.getItemEntity(Long.parseLong(req.params(":id"))) == null)
+            if (ItemEntity.getItemEntity(Long.parseLong(req.params(":id"))) == null)
                 end(404, ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " not found");
         } catch (SQLException e) {
             e.printStackTrace();
@@ -80,7 +86,7 @@ public class ItemEndpoint extends Endpoint {
         before("", this::isItemExist);
 
         try {
-            return Database.getItemEntity(Long.parseLong(req.params(":id")));
+            return ItemEntity.getItemEntity(Long.parseLong(req.params(":id")));
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
@@ -94,7 +100,7 @@ public class ItemEndpoint extends Endpoint {
 
         List<ItemEntity> items = null;
         try {
-            items = Database.getAllItemEntities();
+            items = ItemEntity.getAllItemEntities();
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
@@ -127,7 +133,10 @@ public class ItemEndpoint extends Endpoint {
         before("", this.checkPermission(req, res, Permission.CAN_DELETE_ITEMS));
         before("", this::isItemExist);
         try {
-            Database.deleteItemEntity(Database.getItemEntity(Long.parseLong(req.params(":id"))));
+            ItemEntity item = ItemEntity.getItemEntity(Long.parseLong(req.params(":id")));
+            if (item == null) end(404, ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " not found");
+            assert item != null;
+            item.delete();
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
@@ -142,13 +151,32 @@ public class ItemEndpoint extends Endpoint {
         ItemEntity item = this.objectFromBody(req, ItemEntity.class);
 
         try {
-            Database.upsertItemEntity(item);
+            item.update();
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
 
         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Updated Item with ID " + req.params(":id"), gson.toJsonTree(item)));
+    }
+
+    private CheckoutEntity getCheckout(Request req, Response res) {
+        before("", this.checkPermission(req, res, Permission.CAN_VIEW_CHECKOUTS));
+        ItemEntity item = getItem(req, res);
+        assert item != null;
+
+        CheckoutEntity checkout = null;
+        try {
+            checkout = item.getCheckoutEntities().get(Long.parseLong(req.params(":checkoutId")));
+        } catch (NumberFormatException e) {
+            end(400, ResponseStatus.ERROR, "Invalid checkout ID");
+        }
+
+        if (checkout == null) {
+            end(404, ResponseStatus.ERROR, "Checkout with ID " + req.params(":checkoutId") + " not found");
+        }
+
+        return checkout;
     }
 
     private String getItemActiveCheckout(Request req, Response res) {
@@ -183,12 +211,17 @@ public class ItemEndpoint extends Endpoint {
 
         item.setCheckoutEntity(checkout);
         try {
-            Database.upsertItemEntity(item);
+            item.update();
         } catch (SQLException e) {
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
 
         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Checked out Item with ID " + req.params(":id")));
+    }
+
+    private String getItemCheckout(Request req, Response res) {
+        before("", Authentication.checkPermission(req, res, Permission.CAN_VIEW_CHECKOUTS));
+        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(getCheckout(req, res))));
     }
 
     private String returnItem(Request req, Response res) {
@@ -210,7 +243,7 @@ public class ItemEndpoint extends Endpoint {
         item.addCheckoutEntity(checkout);
 
         try {
-            Database.upsertItemEntity(item);
+            item.update();
         } catch (SQLException e) {
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
@@ -225,7 +258,7 @@ public class ItemEndpoint extends Endpoint {
         assert item != null;
 
         try {
-            Database.upsertItemEntity(item);
+            item.create();
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");

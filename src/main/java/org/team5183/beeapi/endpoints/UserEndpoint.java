@@ -38,8 +38,8 @@ public class UserEndpoint extends Endpoint {
             get("/all?limit=:limit", this::getAllUsers);
 
             path("/:id", () -> {
-                before(Authentication::authenticate);
-                before("", (req,res) -> Authentication.checkPermission(req, res, Role.ADMIN));
+//                before(Authentication::authenticate);
+//                before("", (req,res) -> Authentication.checkPermission(req, res, Role.ADMIN));
 
                 get("", this::getSelfUser);
 
@@ -49,7 +49,7 @@ public class UserEndpoint extends Endpoint {
             });
 
             path("/me", () -> {
-                before(Authentication::authenticate);
+//                before(Authentication::authenticate);
 
                 get("", this::getSelfUser);
 
@@ -76,7 +76,7 @@ public class UserEndpoint extends Endpoint {
 
         UserEntity user = null;
         try {
-            user = Database.getUserEntityByLogin(login);
+            user = UserEntity.getUserEntityByLogin(login);
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
@@ -94,7 +94,7 @@ public class UserEndpoint extends Endpoint {
 
         UserEntity user = null;
         try {
-            user = Database.getUserEntityByEmail(email);
+            user = UserEntity.getUserEntityByEmail(email);
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
@@ -147,7 +147,7 @@ public class UserEndpoint extends Endpoint {
         assert user != null;
 
         try {
-            Database.upsertUserEntity(user);
+            user.update();
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
@@ -182,9 +182,9 @@ public class UserEndpoint extends Endpoint {
         UserEntity user = null;
         try {
             if (login.has("login")) {
-                user = Database.getUserEntityByLogin(login.get("login").getAsString());
+                user = UserEntity.getUserEntityByLogin(login.get("login").getAsString());
             } else if (login.has("email")) {
-                user = Database.getUserEntityByEmail(login.get("email").getAsString());
+                user = UserEntity.getUserEntityByEmail(login.get("email").getAsString());
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -206,9 +206,9 @@ public class UserEndpoint extends Endpoint {
     private String getAllUsers(Request req, Response res) {
         before("", this.checkPermission(req, res, Role.ADMIN));
 
-        List<ItemEntity> users = null;
+        List<UserEntity> users = null;
         try {
-            users = Database.getAllItemEntities();
+            users = UserEntity.getAllUserEntities();
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
@@ -217,14 +217,14 @@ public class UserEndpoint extends Endpoint {
         assert users != null;
 
         if (req.params(":limit") != null && !req.params(":limit").isEmpty()) {
-            List<ItemEntity> itemsCopy = new ArrayList<>(Integer.parseInt(req.params(":limit")));
+            List<UserEntity> usersCopy = new ArrayList<>(Integer.parseInt(req.params(":limit")));
             for (int i = 0; i < users.size(); i++) {
-                itemsCopy.add(users.get(i));
+                usersCopy.add(users.get(i));
                 if (i >= Integer.parseInt(req.params(":limit"))) {
                     break;
                 }
             }
-            return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(itemsCopy)));
+            return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(usersCopy)));
         }
         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(users)));
     }
@@ -256,7 +256,7 @@ public class UserEndpoint extends Endpoint {
 
 
         try {
-            Database.upsertUserEntity(user);
+            user.update();
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
@@ -317,7 +317,7 @@ public class UserEndpoint extends Endpoint {
         }
 
         try {
-            Database.updateUserEntity(user);
+            user.update();
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
@@ -335,12 +335,12 @@ public class UserEndpoint extends Endpoint {
         for (String token : tokensList) {
             try {
                 token = token.replace("Bearer ", "");
-                if (Database.getUserEntityByToken(token) == null) {
+                if (UserEntity.getUserEntityByToken(token) == null) {
                     tokens.remove(token);
                 } else {
-                    UserEntity user = Database.getUserEntityByToken(token);
+                    UserEntity user = UserEntity.getUserEntityByToken(token);
                     user.setToken("");
-                    Database.updateUserEntity(Database.getUserEntityByToken(token));
+                    user.update();
                 }
             } catch (SQLException e) {
                 e.printStackTrace();

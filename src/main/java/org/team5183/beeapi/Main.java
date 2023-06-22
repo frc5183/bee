@@ -10,6 +10,7 @@ import org.team5183.beeapi.entities.UserEntity;
 import org.team5183.beeapi.runnables.DatabaseRequestRunnable;
 import org.team5183.beeapi.threading.ThreadingManager;
 
+import javax.xml.crypto.Data;
 import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
@@ -33,14 +34,25 @@ public class Main {
         ipAddress(System.getenv("IP") != null ? System.getenv("IP") : "localhost");
         port(System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 5050);
 
+        new Thread(new ThreadingManager()).start();
+
+        // Add threading tasks
+        ThreadingManager.addTask(new DatabaseRequestRunnable());
+
+        while (!DatabaseRequestRunnable.getReady().isDone()) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
 
         // Register endpoints
         new ItemEndpoint().registerEndpoints();
         new UserEndpoint().registerEndpoints();
         new MiscEndpoint().registerEndpoints();
 
-        // Add threading tasks
-        ThreadingManager.addTask(new DatabaseRequestRunnable());
 
         // First run checks
         File init = new File("INITIALIZED");
@@ -59,8 +71,14 @@ public class Main {
             }
             String password = buffer.toString();
 
-            // Create a new admin user.
-            new UserEntity("admin", password, "admin@example.com", "Admin", Role.ADMIN).update();
+            try {
+                // Create a new admin user.
+                new UserEntity("admin", password, "admin@example.com", "Admin", Role.ADMIN).create();
+            } catch (SQLException e) {
+                logger.fatal("Failed to create admin user, exiting.");
+                init.delete();
+                System.exit(1);
+            }
 
             // Print credentials to console.
             logger.warn("New account\nUsername: admin\nPassword: " + password + "\n--------------------\n\n");

@@ -39,7 +39,7 @@ public class Authentication {
         token = token.replace("Bearer ", "");
 
         try {
-            if (Database.getUserEntityByToken(token) == null) {
+            if (UserEntity.getUserEntityByToken(token) == null) {
                 response.header("WWW-Authenticate", "Bearer error=\"invalid_token\"");
                 halt(401, new Gson().toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid Token")));
             }
@@ -61,7 +61,7 @@ public class Authentication {
         String token = request.headers("Authorization").replace("Bearer ", "");
 
         try {
-            UserEntity user = Database.getUserEntityByToken(token);
+            UserEntity user = UserEntity.getUserEntityByToken(token);
             assert user != null;
             if (!(user.getRole().equals(role))) halt(403, new Gson().toJson(new BasicResponse(ResponseStatus.ERROR, "Insufficient Permissions")));
         } catch (SQLException e) {
@@ -76,7 +76,7 @@ public class Authentication {
         String token = request.headers("Authorization").replace("Bearer ", "");
 
         try {
-            UserEntity user = Database.getUserEntityByToken(token);
+            UserEntity user = UserEntity.getUserEntityByToken(token);
             assert user != null;
             if (!(user.getPermissionsList().contains(permission)) && !((user.getRole().equals(Role.ADMIN)))) halt(403, new Gson().toJson(new BasicResponse(ResponseStatus.ERROR, "Insufficient Permissions")));
         } catch (SQLException e) {

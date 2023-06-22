@@ -1,16 +1,21 @@
 package org.team5183.beeapi.entities;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import com.google.gson.annotations.Expose;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.team5183.beeapi.runnables.DatabaseRequestRunnable;
 
 import javax.persistence.*;
+import java.sql.SQLException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 @DatabaseTable(tableName = "bee_items")
 public class ItemEntity {
@@ -50,7 +55,7 @@ public class ItemEntity {
 
     private transient @Nullable CheckoutEntity checkoutEntity;
 
-    private transient @NotNull Collection<CheckoutEntity> checkoutEntities;
+    private transient @NotNull HashMap<Long, CheckoutEntity> checkoutEntities;
 
 
     /**
@@ -68,7 +73,7 @@ public class ItemEntity {
         this.price = price;
         this.retailer = retailer == null ? "" : retailer;
         this.partNumber = partNumber == null ? "" : partNumber;
-        this.checkoutEntities = new HashSet<>();
+        this.checkoutEntities = new HashMap<>();
         this.checkouts = new Gson().toJson(checkoutEntities);
     }
 
@@ -79,13 +84,79 @@ public class ItemEntity {
     private ItemEntity() {
         if (checkouts == null || checkouts.isBlank() || checkouts.isEmpty()) {
             checkouts = "";
-            this.checkoutEntities = new HashSet<>();
+            this.checkoutEntities = new HashMap<>();
         } else {
-            new Gson().fromJson(checkouts, CheckoutEntity[].class);
+            checkoutEntities = new Gson().fromJson(checkouts, HashMap.class);
         }
 
-        new Gson().fromJson(checkout, CheckoutEntity.class);
+        checkoutEntity = new Gson().fromJson(checkout, CheckoutEntity.class);
     }
+
+
+    /**
+     * Gets the user with the specified ID.
+     * @param id The ID of the user.
+     * @return The user with the specified ID, or null if no user exists with that ID.
+     * @throws SQLException If an error occurs while querying the database.
+     */
+    @Nullable
+    public static ItemEntity getItemEntity(long id) throws SQLException {
+        CompletableFuture<ItemEntity> future = DatabaseRequestRunnable.itemQuery(DatabaseRequestRunnable.getItemDao().queryBuilder().where().eq("id", id).prepare());
+        AtomicReference<ItemEntity> itemEntity = new AtomicReference<>();
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+        future.whenComplete((ie, t) -> {
+            throwable.set(t);
+            itemEntity.set(ie);
+        });
+
+        if (throwable.get() != null) {
+            throw new SQLException(throwable.get());
+        }
+
+        return itemEntity.get();
+    }
+
+    public static List<ItemEntity> getAllItemEntities() throws SQLException {
+        CompletableFuture<List<ItemEntity>> future = DatabaseRequestRunnable.itemQueryMultiple(DatabaseRequestRunnable.getItemDao().queryBuilder().prepare());
+        AtomicReference<List<ItemEntity>> itemEntities = new AtomicReference<>();
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+        future.whenComplete((ie, t) -> {
+            throwable.set(t);
+            itemEntities.set(ie);
+        });
+
+        if (throwable.get() != null) {
+            throw new SQLException(throwable.get());
+        }
+
+        return itemEntities.get();
+    }
+
+    /**
+     * Creates the user in the database.
+     * TODO: make this not like this, allow it to actually run through the database request runnable's cache instead of just forcing synchronization, there isn't a PreparedCreate for this tho so time to innovate!!!
+     * @throws SQLException If an error occurs while creating the user in the database.
+     */
+    public synchronized void create() throws SQLException {
+        DatabaseRequestRunnable.getItemDao().createOrUpdate(this);
+    }
+
+    /**
+     * Updates the user in the database.
+     * @throws SQLException If an error occurs while updating the user in the database.
+     */
+    public void update() throws SQLException {
+        DatabaseRequestRunnable.itemStatement(DatabaseRequestRunnable.getItemDao().updateBuilder().where().eq("id", this.id).prepare());
+    }
+
+    /**
+     * Deletes the user from the database.
+     * @throws SQLException If an error occurs while deleting the user from the database.
+     */
+    public void delete() throws SQLException {
+        DatabaseRequestRunnable.itemStatement(DatabaseRequestRunnable.getItemDao().deleteBuilder().where().eq("id", this.id).prepare());
+    }
+
 
     /**
      * @return The ID of the item
@@ -161,7 +232,7 @@ public class ItemEntity {
      * @param retailer The new retailer of the item
      */
     public synchronized void setRetailer(@Nullable String retailer) {
-        this.retailer = retailer;
+        this.retailer = retailer == null ? "" : retailer;
     }
 
     /**
@@ -175,7 +246,7 @@ public class ItemEntity {
      * @param partNumber The new part number of the item
      */
     public synchronized void setPartNumber(@Nullable String partNumber) {
-        this.partNumber = partNumber;
+        this.partNumber = partNumber == null ? "" : partNumber;
     }
 
     /**
@@ -223,7 +294,7 @@ public class ItemEntity {
         if (checkoutEntity != null) {
             addCheckoutEntity(checkoutEntity);
         } else {
-            for (CheckoutEntity checkout : checkoutEntities) {
+            for (CheckoutEntity checkout : checkoutEntities.values()) {
                 if (checkout.isActive()) {
                     checkout.setActive(false);
                     break;
@@ -235,7 +306,7 @@ public class ItemEntity {
     /**
      * @return The checkout entities of the item
      */
-    public synchronized @NotNull Collection<CheckoutEntity> getCheckoutEntities() {
+    public synchronized @NotNull HashMap<Long, CheckoutEntity> getCheckoutEntities() {
         return checkoutEntities;
     }
 
@@ -243,7 +314,7 @@ public class ItemEntity {
      * @param checkout The checkout entity to add to the item
      */
     public synchronized void addCheckoutEntity(@NotNull CheckoutEntity checkout) {
-        this.checkoutEntities.add(checkout);
+        this.checkoutEntities.put(checkout.getId(), checkout);
         this.checkouts = new Gson().toJson(checkoutEntities);
     }
 
@@ -251,14 +322,14 @@ public class ItemEntity {
      * @param checkout The checkout entity to remove from the item
      */
     public synchronized void removeCheckoutEntity(@NotNull CheckoutEntity checkout) {
-        this.checkoutEntities.remove(checkout);
+        this.checkoutEntities.remove(checkout.getId());
         this.checkouts = new Gson().toJson(checkoutEntities);
     }
 
     /**
      * @param checkoutEntities The new checkout entities of the item
      */
-    public synchronized void setCheckoutEntities(@NotNull Collection<CheckoutEntity> checkoutEntities) {
+    public synchronized void setCheckoutEntities(@NotNull HashMap<Long, CheckoutEntity> checkoutEntities) {
         this.checkouts = new Gson().toJson(checkoutEntities);
         this.checkoutEntities = checkoutEntities;
     }

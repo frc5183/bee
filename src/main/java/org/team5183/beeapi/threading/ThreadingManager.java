@@ -18,8 +18,8 @@ public class ThreadingManager extends Thread {
 
     private static final HashMap<EndableRunnable, Integer> endAttempts = new HashMap<>();
 
-    private static final int maxThreads = System.getenv("maxThreads") == null ? Integer.parseInt(System.getenv("maxThreads")) : 10;
-    private static final int maxEndAttempts = System.getenv("maxEndAttempts") == null ? Integer.parseInt(System.getenv("maxEndAttempts")) : 5;
+    private static final int maxThreads = (System.getenv("maxThreads") == null || System.getenv("maxThreads").isEmpty() || System.getenv("maxThreads").isBlank()) ? 10 : Integer.parseInt(System.getenv("maxThreads"));
+    private static final int maxEndAttempts = (System.getenv("maxEndAttempts") == null || System.getenv("maxEndAttempts").isEmpty() || System.getenv("maxEndAttempts").isBlank()) ? 5 : Integer.parseInt(System.getenv("maxEndAttempts"));
 
     private static final HashMap<EndableRunnable, Long> lastDamagedMessage = new HashMap<>();
 

@@ -15,26 +15,29 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class DatabaseRequestRunnable extends EndableRunnable {
     private static Logger logger = LogManager.getLogger(DatabaseRequestRunnable.class);
+
+    private static CompletableFuture<Boolean> ready = new CompletableFuture<>();
 
     // Item DAO for interacting with specific tables.
     private static Dao<ItemEntity, Long> itemDao;
     private static Dao<UserEntity, Long> userDao;
 
     // Caches.
-    private static LinkedBlockingQueue<PreparedStmt<ItemEntity>> itemCache = new LinkedBlockingQueue<>();
-    private static LinkedBlockingQueue<PreparedStmt<UserEntity>> userCache = new LinkedBlockingQueue<>();
+    private static final LinkedBlockingQueue<PreparedStmt<ItemEntity>> itemCache = new LinkedBlockingQueue<>();
+    private static final LinkedBlockingQueue<PreparedStmt<UserEntity>> userCache = new LinkedBlockingQueue<>();
 
-    private static ConcurrentHashMap<PreparedStmt<ItemEntity>, CompletableFuture<ItemEntity>> itemFutureCache = new ConcurrentHashMap<>();
-    private static ConcurrentHashMap<PreparedStmt<UserEntity>, CompletableFuture<UserEntity>> userFutureCache = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<PreparedStmt<ItemEntity>, CompletableFuture<ItemEntity>> itemFutureCache = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<PreparedStmt<UserEntity>, CompletableFuture<UserEntity>> userFutureCache = new ConcurrentHashMap<>();
 
-    private static ConcurrentHashMap<PreparedStmt<ItemEntity>, CompletableFuture<List<ItemEntity>>> itemFutureListCache = new ConcurrentHashMap<>();
-    private static ConcurrentHashMap<PreparedStmt<UserEntity>, CompletableFuture<List<UserEntity>>> userFutureListCache = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<PreparedStmt<ItemEntity>, CompletableFuture<List<ItemEntity>>> itemFutureListCache = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<PreparedStmt<UserEntity>, CompletableFuture<List<UserEntity>>> userFutureListCache = new ConcurrentHashMap<>();
 
-    private static ConcurrentHashMap<PreparedStmt, CompletableFuture<Boolean>> basicFutureCache = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<PreparedStmt, CompletableFuture<Boolean>> basicFutureCache = new ConcurrentHashMap<>();
 
     @Override
     public String getName() {
@@ -42,7 +45,7 @@ public class DatabaseRequestRunnable extends EndableRunnable {
     }
 
     @Override
-    public void run() {
+    public synchronized void run() {
         // Initialize database.
         JdbcPooledConnectionSource connectionSource = null;
         try {
@@ -58,31 +61,35 @@ public class DatabaseRequestRunnable extends EndableRunnable {
             itemDao = DaoManager.createDao(connectionSource, ItemEntity.class);
             userDao = DaoManager.createDao(connectionSource, UserEntity.class);
         } catch (SQLException e) {
+            ready.completeExceptionally(e);
             throw new RuntimeException(e);
         }
 
+        ready.complete(true);
+
+        // TODO: make queries run faster idk
         // Begin loop.
-        while (true) {
-            // Shutdown if requested.
-            if (this.status == RunnableStatus.ENDING) {
-                try {
-                    // Dump all caches.
-                    for (int i = 0; i < itemCache.size(); i++) dumpItemCache(itemCache.poll());
-                    for (int i = 0; i < userCache.size(); i++) dumpUserCache(userCache.poll());
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-
-                // Close connection source.
-                try {
-                    connectionSource.close();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-
-                break;
+        while (this.status != RunnableStatus.ENDED || this.status != RunnableStatus.ENDING) {
+            try {
+                // Dump all caches.
+                for (int i = 0; i < itemCache.size(); i++)
+                    dumpItemCache(itemCache.poll());
+                for (int i = 0; i < userCache.size(); i++)
+                    dumpUserCache(userCache.poll());
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
             }
 
+            // Wait 5 minutes and loop again.
+            try {
+                wait(5000);
+                //wait(1000 * 60 * 5);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        if (this.status == RunnableStatus.ENDING) {
             try {
                 // Dump all caches.
                 for (int i = 0; i < itemCache.size(); i++) dumpItemCache(itemCache.poll());
@@ -91,10 +98,10 @@ public class DatabaseRequestRunnable extends EndableRunnable {
                 throw new RuntimeException(e);
             }
 
-            // Wait 5 minutes and loop again.
+            // Close connection source.
             try {
-                wait(1000 * 60 * 5);
-            } catch (InterruptedException e) {
+                connectionSource.close();
+            } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
@@ -108,7 +115,7 @@ public class DatabaseRequestRunnable extends EndableRunnable {
         notifyAll(); // Notify all threads to wake up from sleep/wait.
     }
 
-    private void dumpItemCache(@NotNull PreparedStmt<ItemEntity> itemStmt) throws SQLException {
+    private synchronized void dumpItemCache(@NotNull PreparedStmt<ItemEntity> itemStmt) throws SQLException {
         if (itemFutureCache.containsKey(itemStmt) && itemStmt.getType() == StatementBuilder.StatementType.SELECT) {
             CompletableFuture<ItemEntity> future = itemFutureCache.get(itemStmt);
             try {
@@ -134,15 +141,15 @@ public class DatabaseRequestRunnable extends EndableRunnable {
         }
     }
 
-    private void dumpUserCache(@NotNull PreparedStmt<UserEntity> userStmt) throws SQLException {
-        if (itemFutureCache.containsKey(userStmt) && userStmt.getType() == StatementBuilder.StatementType.SELECT) {
+    private synchronized void dumpUserCache(@NotNull PreparedStmt<UserEntity> userStmt) throws SQLException {
+        if (userFutureCache.containsKey(userStmt) && userStmt.getType().isOkForQuery()) {
             CompletableFuture<UserEntity> future = userFutureCache.get(userStmt);
             try {
                 future.complete(userDao.queryForFirst((PreparedQuery<UserEntity>) userStmt));
             } catch (SQLException e) {
                 future.completeExceptionally(e);
             }
-        } else if (itemFutureListCache.containsKey(userStmt) && userStmt.getType() == StatementBuilder.StatementType.SELECT) {
+        } else if (userFutureListCache.containsKey(userStmt) && userStmt.getType().isOkForQuery()) {
             CompletableFuture<List<UserEntity>> future = userFutureListCache.get(userStmt);
             try {
                 future.complete(userDao.query((PreparedQuery<UserEntity>) userStmt));
@@ -175,45 +182,49 @@ public class DatabaseRequestRunnable extends EndableRunnable {
         return userDao;
     }
 
-    public static CompletableFuture<Boolean> itemStatement(@NotNull PreparedStmt<ItemEntity> statement) {
+    public static synchronized CompletableFuture<Boolean> itemStatement(@NotNull PreparedStmt<ItemEntity> statement) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         itemCache.offer(statement);
         basicFutureCache.put(statement, future);
         return future;
     }
 
-    public static CompletableFuture<ItemEntity> itemQuery(@NotNull PreparedQuery<ItemEntity> statement) {
+    public static synchronized CompletableFuture<ItemEntity> itemQuery(@NotNull PreparedQuery<ItemEntity> statement) {
         CompletableFuture<ItemEntity> future = new CompletableFuture<>();
         itemCache.offer(statement);
         itemFutureCache.put(statement, future);
         return future;
     }
 
-    public static CompletableFuture<List<ItemEntity>> itemQueryMultiple(@NotNull PreparedQuery<ItemEntity> statement) {
+    public static synchronized CompletableFuture<List<ItemEntity>> itemQueryMultiple(@NotNull PreparedQuery<ItemEntity> statement) {
         CompletableFuture<List<ItemEntity>> future = new CompletableFuture<>();
         itemCache.offer(statement);
         itemFutureListCache.put(statement, future);
         return future;
     }
 
-    public static CompletableFuture<Boolean> userStatement(@NotNull PreparedStmt<UserEntity> statement) {
+    public static synchronized CompletableFuture<Boolean> userStatement(@NotNull PreparedStmt<UserEntity> statement) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         userCache.offer(statement);
         basicFutureCache.put(statement, future);
         return future;
     }
 
-    public static CompletableFuture<UserEntity> userQuery(@NotNull PreparedQuery<UserEntity> statement) {
+    public static synchronized CompletableFuture<UserEntity> userQuery(@NotNull PreparedQuery<UserEntity> statement) {
         CompletableFuture<UserEntity> future = new CompletableFuture<>();
         userCache.offer(statement);
         userFutureCache.put(statement, future);
         return future;
     }
 
-    public static CompletableFuture<List<UserEntity>> userQueryMultiple(@NotNull PreparedQuery<UserEntity> statement) {
+    public static synchronized CompletableFuture<List<UserEntity>> userQueryMultiple(@NotNull PreparedQuery<UserEntity> statement) {
         CompletableFuture<List<UserEntity>> future = new CompletableFuture<>();
         userCache.offer(statement);
         userFutureListCache.put(statement, future);
         return future;
+    }
+
+    public static synchronized CompletableFuture<Boolean> getReady() {
+        return ready;
     }
 }

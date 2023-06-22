@@ -130,15 +130,21 @@ public class UserEntity {
         CompletableFuture<UserEntity> future = DatabaseRequestRunnable.userQuery(DatabaseRequestRunnable.getUserDao().queryBuilder().where().eq("login", login).prepare());
         AtomicReference<UserEntity> userEntity = new AtomicReference<>();
         AtomicReference<Throwable> throwable = new AtomicReference<>();
+        while (!future.isDone()) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (future.isCancelled()) return null;
         future.whenComplete((ue, t) -> {
             throwable.set(t);
             userEntity.set(ue);
         });
 
-        if (throwable.get() != null) {
-            throw new SQLException(throwable.get());
-        }
-
+        if (throwable.get() != null) throw new SQLException(throwable.get());
         return userEntity.get();
     }
 
@@ -183,7 +189,7 @@ public class UserEntity {
 
     /**
      * Gets the user with the specified token
-     * @param @token The token of the user.
+     * @param token The token of the user.
      * @return The user with the specified token, or null if no user exists with that token.
      * @throws SQLException If an error occurs while querying the database.
      */
@@ -206,7 +212,7 @@ public class UserEntity {
 
     /**
      * Creates the user in the database.
-     * TODO: make this not like this, allow it to actually run through the database request runnable's cache instead of just forcing synchronization bc
+     * TODO: make this not like this, allow it to actually run through the database request runnable's cache instead of just forcing synchronization, there isn't a PreparedCreate for this tho so time to innovate!!!
      * @throws SQLException If an error occurs while creating the user in the database.
      */
     public synchronized void create() throws SQLException {

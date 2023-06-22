@@ -5,6 +5,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class CheckoutEntity {
+    @Expose(serialize = true, deserialize = false)
+    private @NotNull Long id;
+
     @Expose
     private @NotNull String by;
 
@@ -24,7 +27,8 @@ public class CheckoutEntity {
      * @param by The name of the person who checked out the item
      * @param date The date the item was checked in milliseconds since epoch
      */
-    public CheckoutEntity(@NotNull String by, @Nullable String reason, @NotNull Long date) {
+    public CheckoutEntity(@NotNull ItemEntity item, @NotNull String by, @Nullable String reason, @NotNull Long date) {
+        this.id = (item.getCheckoutEntities().size() + 1L);
         this.by = by;
         this.reason = reason == null ? "" : reason;
         this.date = date;
@@ -39,6 +43,20 @@ public class CheckoutEntity {
     }
 
     /**
+     * @return The ID of the checkout
+     */
+    public @NotNull Long getId() {
+        return id;
+    }
+
+    /**
+     * @param id The ID of the checkout
+     */
+    public void setId(@NotNull Long id) {
+        this.id = id;
+    }
+
+    /**
      * @param by The name of the person who checked out the item
      */
     public synchronized void setBy(@NotNull String by) {
@@ -48,14 +66,14 @@ public class CheckoutEntity {
     /**
      * @return The reason the item was checked out
      */
-    public synchronized String getReason() {
+    public synchronized @NotNull String getReason() {
         return reason;
     }
 
     /**
      * @param reason The reason the item was checked out
      */
-    public synchronized void setReason(String reason) {
+    public synchronized void setReason(@NotNull String reason) {
         this.reason = reason;
     }
 
