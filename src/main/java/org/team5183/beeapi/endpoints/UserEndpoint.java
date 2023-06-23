@@ -30,7 +30,7 @@ public class UserEndpoint extends Endpoint {
     public void registerEndpoints() {
         //todo allow admin to get all users and basically call /me on all users just w/o the token and its just an id instead of /me
         path("/users", () -> {
-            put("/register", this::registerUser);
+            post("/register", this::registerUser);
 
             post("/login", this::loginUser);
 
@@ -62,7 +62,7 @@ public class UserEndpoint extends Endpoint {
 
             patch("/invalidateTokens", this::invalidateTokens);
 
-            put("/logout", this::logoutSelf);
+            post("/logout", this::logoutSelf);
         });
     }
 
