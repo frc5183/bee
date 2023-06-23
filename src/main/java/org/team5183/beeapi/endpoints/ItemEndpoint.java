@@ -218,6 +218,28 @@ public class ItemEndpoint extends Endpoint {
 
                 return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Returned Item with ID " + req.params(":id")));
             });
+
+            post("/new", (req, res) -> {
+                before("", Authentication.checkPermission(req, res, Permission.CAN_CREATE_ITEMS));
+                ItemEntity item;
+                try {
+                    item = gson.fromJson(req.body(), ItemEntity.class);
+                } catch (JsonSyntaxException e) {
+                    res.status(400);
+                    return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid Body"));
+                }
+
+                try {
+                    Database.upsertItemEntity(item);
+                } catch (SQLException e) {
+                    logger.error(e);
+                    res.status(500);
+                    return gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Internal Server Error"));
+                }
+
+                res.status(201);
+                return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Created item with ID "+ item.getId(), new Gson().toJsonTree(item)));
+            });
         });
     }
 
