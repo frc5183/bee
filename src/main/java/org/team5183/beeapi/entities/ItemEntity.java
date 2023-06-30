@@ -6,13 +6,11 @@ import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.team5183.beeapi.runnables.DatabaseRequestRunnable;
+import org.team5183.beeapi.runnables.DatabaseRunnable;
 
 import javax.persistence.*;
 import java.sql.SQLException;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -101,7 +99,7 @@ public class ItemEntity {
      */
     @Nullable
     public static ItemEntity getItemEntity(long id) throws SQLException {
-        CompletableFuture<ItemEntity> future = DatabaseRequestRunnable.itemQuery(DatabaseRequestRunnable.getItemDao().queryBuilder().where().eq("id", id).prepare());
+        CompletableFuture<ItemEntity> future = DatabaseRunnable.itemQuery(DatabaseRunnable.getItemDao().queryBuilder().where().eq("id", id).prepare());
         AtomicReference<ItemEntity> itemEntity = new AtomicReference<>();
         AtomicReference<Throwable> throwable = new AtomicReference<>();
         future.whenComplete((ie, t) -> {
@@ -117,7 +115,7 @@ public class ItemEntity {
     }
 
     public static List<ItemEntity> getAllItemEntities() throws SQLException {
-        CompletableFuture<List<ItemEntity>> future = DatabaseRequestRunnable.itemQueryMultiple(DatabaseRequestRunnable.getItemDao().queryBuilder().prepare());
+        CompletableFuture<List<ItemEntity>> future = DatabaseRunnable.itemQueryMultiple(DatabaseRunnable.getItemDao().queryBuilder().prepare());
         AtomicReference<List<ItemEntity>> itemEntities = new AtomicReference<>();
         AtomicReference<Throwable> throwable = new AtomicReference<>();
         future.whenComplete((ie, t) -> {
@@ -138,7 +136,7 @@ public class ItemEntity {
      * @throws SQLException If an error occurs while creating the user in the database.
      */
     public synchronized void create() throws SQLException {
-        DatabaseRequestRunnable.getItemDao().createOrUpdate(this);
+        DatabaseRunnable.getItemDao().createOrUpdate(this);
     }
 
     /**
@@ -146,7 +144,7 @@ public class ItemEntity {
      * @throws SQLException If an error occurs while updating the user in the database.
      */
     public void update() throws SQLException {
-        DatabaseRequestRunnable.itemStatement(DatabaseRequestRunnable.getItemDao().updateBuilder().where().eq("id", this.id).prepare());
+        DatabaseRunnable.itemStatement(DatabaseRunnable.getItemDao().updateBuilder().where().eq("id", this.id).prepare());
     }
 
     /**
@@ -154,7 +152,7 @@ public class ItemEntity {
      * @throws SQLException If an error occurs while deleting the user from the database.
      */
     public void delete() throws SQLException {
-        DatabaseRequestRunnable.itemStatement(DatabaseRequestRunnable.getItemDao().deleteBuilder().where().eq("id", this.id).prepare());
+        DatabaseRunnable.itemStatement(DatabaseRunnable.getItemDao().deleteBuilder().where().eq("id", this.id).prepare());
     }
 
 

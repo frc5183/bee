@@ -11,7 +11,7 @@ import org.team5183.beeapi.authentication.HashPassword;
 import org.team5183.beeapi.authentication.JWTManager;
 import org.team5183.beeapi.constants.Permission;
 import org.team5183.beeapi.constants.Role;
-import org.team5183.beeapi.runnables.DatabaseRequestRunnable;
+import org.team5183.beeapi.runnables.DatabaseRunnable;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
@@ -105,7 +105,7 @@ public class UserEntity {
      */
     @Nullable
     public static UserEntity getUserEntity(long id) throws SQLException {
-        CompletableFuture<UserEntity> future = DatabaseRequestRunnable.userQuery(DatabaseRequestRunnable.getUserDao().queryBuilder().where().eq("id", id).prepare());
+        CompletableFuture<UserEntity> future = DatabaseRunnable.userQuery(DatabaseRunnable.getUserDao().queryBuilder().where().eq("id", id).prepare());
         AtomicReference<UserEntity> userEntity = new AtomicReference<>();
         AtomicReference<Throwable> throwable = new AtomicReference<>();
         while (!future.isDone()) {
@@ -129,7 +129,7 @@ public class UserEntity {
      */
     @Nullable
     public static UserEntity getUserEntityByLogin(String login) throws SQLException {
-        CompletableFuture<UserEntity> future = DatabaseRequestRunnable.userQuery(DatabaseRequestRunnable.getUserDao().queryBuilder().where().eq("login", login).prepare());
+        CompletableFuture<UserEntity> future = DatabaseRunnable.userQuery(DatabaseRunnable.getUserDao().queryBuilder().where().eq("login", login).prepare());
         AtomicReference<UserEntity> userEntity = new AtomicReference<>();
         AtomicReference<Throwable> throwable = new AtomicReference<>();
         while (!future.isDone()) {
@@ -153,7 +153,7 @@ public class UserEntity {
      */
     @Nullable
     public static UserEntity getUserEntityByEmail(String email) throws SQLException {
-        CompletableFuture<UserEntity> future = DatabaseRequestRunnable.userQuery(DatabaseRequestRunnable.getUserDao().queryBuilder().where().eq("email", email).prepare());
+        CompletableFuture<UserEntity> future = DatabaseRunnable.userQuery(DatabaseRunnable.getUserDao().queryBuilder().where().eq("email", email).prepare());
         AtomicReference<UserEntity> userEntity = new AtomicReference<>();
         AtomicReference<Throwable> throwable = new AtomicReference<>();
         while (!future.isDone()) {
@@ -177,7 +177,7 @@ public class UserEntity {
      */
     @Nullable
     public static UserEntity getUserEntityByToken(String token) throws SQLException {
-        CompletableFuture<UserEntity> future = DatabaseRequestRunnable.userQuery(DatabaseRequestRunnable.getUserDao().queryBuilder().where().eq("token", token).prepare());
+        CompletableFuture<UserEntity> future = DatabaseRunnable.userQuery(DatabaseRunnable.getUserDao().queryBuilder().where().eq("token", token).prepare());
         AtomicReference<UserEntity> userEntity = new AtomicReference<>();
         AtomicReference<Throwable> throwable = new AtomicReference<>();
         while (!future.isDone()) {
@@ -193,21 +193,74 @@ public class UserEntity {
         return userEntity.get();
     }
 
+    /**
+     * @return A list of all users in the database.
+     * @throws SQLException If an error occurs while querying the database.
+     * @see #getAllUserEntities(Long)
+     * @see #getAllUserEntities(Long, Long)
+     */
     public static List<UserEntity> getAllUserEntities() throws SQLException {
-        CompletableFuture<List<UserEntity>> future = DatabaseRequestRunnable.userQueryMultiple(DatabaseRequestRunnable.getUserDao().queryBuilder().prepare());
-        AtomicReference<List<UserEntity>> userEntity = new AtomicReference<>();
+        CompletableFuture<List<UserEntity>> future = DatabaseRunnable.userQueryMultiple(DatabaseRunnable.getUserDao().queryBuilder().prepare());
+        AtomicReference<List<UserEntity>> userEntities = new AtomicReference<>();
         AtomicReference<Throwable> throwable = new AtomicReference<>();
         while (!future.isDone()) {
         }
 
         if (future.isCancelled()) return null;
-        future.whenComplete((ue, t) -> {
+        future.whenComplete((list, t) -> {
             throwable.set(t);
-            userEntity.set(ue);
+            userEntities.set(list);
         });
 
         if (throwable.get() != null) throw new SQLException(throwable.get());
-        return userEntity.get();
+        return userEntities.get();
+    }
+
+    /**
+     * @param limit The maximum number of users to return.
+     * @return A list of all users in the database.
+     * @throws SQLException If an error occurs while querying the database.
+     */
+    public static List<UserEntity> getAllUserEntities(@NotNull Long limit) throws SQLException {
+        CompletableFuture<List<UserEntity>> future = DatabaseRunnable.userQueryMultiple(DatabaseRunnable.getUserDao().queryBuilder().limit(limit).prepare());
+        AtomicReference<List<UserEntity>> userEntities = new AtomicReference<>();
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+        while (!future.isDone()) {
+        }
+
+        if (future.isCancelled()) return null;
+        future.whenComplete((list, t) -> {
+            throwable.set(t);
+            userEntities.set(list);
+        });
+
+        if (throwable.get() != null) throw new SQLException(throwable.get());
+        return userEntities.get();
+    }
+
+    /**
+     * @param limit The maximum number of users to return.
+     * @param offset The offset to start at.
+     * @return A list of all users in the database.
+     * @throws SQLException If an error occurs while querying the database.
+     */
+    public static List<UserEntity> getAllUserEntities(Long limit, Long offset) throws SQLException {
+        CompletableFuture<List<UserEntity>> future = DatabaseRunnable.userQueryMultiple(DatabaseRunnable.getUserDao().queryBuilder().prepare());
+        AtomicReference<List<UserEntity>> userEntities = new AtomicReference<>();
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+        while (!future.isDone()) {
+        }
+
+        if (future.isCancelled()) return null;
+        future.whenComplete((list, t) -> {
+            throwable.set(t);
+            userEntities.set(list);
+        });
+
+        if (throwable.get() != null) throw new SQLException(throwable.get());
+        List<UserEntity> entities = userEntities.get().subList(offset.intValue(), userEntities.get().size());
+        if (entities.size() > limit) entities = entities.subList(0, limit.intValue());
+        return entities;
     }
 
     /**
@@ -216,7 +269,7 @@ public class UserEntity {
      * @throws SQLException If an error occurs while creating the user in the database.
      */
     public synchronized void create() throws SQLException {
-        DatabaseRequestRunnable.getUserDao().createOrUpdate(this);
+        DatabaseRunnable.getUserDao().createOrUpdate(this);
     }
 
     /**
@@ -224,7 +277,7 @@ public class UserEntity {
      * @throws SQLException If an error occurs while updating the user in the database.
      */
     public void update() throws SQLException {
-        DatabaseRequestRunnable.userStatement(DatabaseRequestRunnable.getUserDao().updateBuilder().where().eq("id", this.id).prepare());
+        DatabaseRunnable.userStatement(DatabaseRunnable.getUserDao().updateBuilder().where().eq("id", this.id).prepare());
     }
 
     public synchronized void upsert() throws SQLException {
@@ -236,7 +289,7 @@ public class UserEntity {
      * @throws SQLException If an error occurs while deleting the user from the database.
      */
     public void delete() throws SQLException {
-        DatabaseRequestRunnable.userStatement(DatabaseRequestRunnable.getUserDao().deleteBuilder().where().eq("id", this.id).prepare());
+        DatabaseRunnable.userStatement(DatabaseRunnable.getUserDao().deleteBuilder().where().eq("id", this.id).prepare());
     }
 
     /**

@@ -8,6 +8,8 @@ public class CheckoutEntity {
     @Expose(serialize = true, deserialize = false)
     private @NotNull Long id;
 
+    private @NotNull ItemEntity item;
+
     @Expose
     private @NotNull String by;
 
@@ -29,6 +31,7 @@ public class CheckoutEntity {
      */
     public CheckoutEntity(@NotNull ItemEntity item, @NotNull String by, @Nullable String reason, @NotNull Long date) {
         this.id = (item.getCheckoutEntities().size() + 1L);
+        this.item = item;
         this.by = by;
         this.reason = reason == null ? "" : reason;
         this.date = date;
@@ -54,6 +57,20 @@ public class CheckoutEntity {
      */
     public void setId(@NotNull Long id) {
         this.id = id;
+    }
+
+    /**
+     * @return The item that was checked out
+     */
+    public @NotNull ItemEntity getItem() {
+        return item;
+    }
+
+    /**
+     * @param item The item that was checked out
+     */
+    public void setItem(@NotNull ItemEntity item) {
+        this.item = item;
     }
 
     /**

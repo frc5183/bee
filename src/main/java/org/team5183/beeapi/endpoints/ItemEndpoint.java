@@ -30,6 +30,7 @@ public class ItemEndpoint extends Endpoint {
             get("/all?limit=:limit", this::getAllItems);
             get("/all?offset=:offset", this::getAllItems);
             get("/all?limit=:limit&offset=:offset", this::getAllItems);
+            post("/new", "application/json", this::newItem);
 
             path("/:id", () -> {
                 before("", this::isItemExist);
@@ -47,16 +48,14 @@ public class ItemEndpoint extends Endpoint {
 
                     path("/:checkoutId", () -> {
                         get("", this::getItemCheckout);
-//                        patch("", this::updateItemCheckout);
-//                        delete("", this::deleteItemCheckout);
+                        patch("", this::updateItemCheckout);
+                        delete("", this::deleteItemCheckout);
                     });
                 });
 
                 post("/checkout", this::checkoutItem);
                 patch("/return", this::returnItem);
             });
-
-            post("/new", "application/json", this::newItem);
         });
     }
 
@@ -124,6 +123,23 @@ public class ItemEndpoint extends Endpoint {
         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(items)));
     }
 
+    private String newItem(Request request, Response response) {
+        before("", Authentication.checkPermission(request, response, Permission.CAN_CREATE_ITEMS));
+        ItemEntity item = this.objectFromBody(request, ItemEntity.class);
+
+        assert item != null;
+
+        try {
+            item.create();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            end(500, ResponseStatus.ERROR, "Internal Server Error");
+        }
+
+        response.status(201);
+        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Created item with ID "+ item.getId(), gson.toJsonTree(item)));
+    }
+
     private String endpointGetItem(Request req, Response res) {
         before("", this.checkPermission(req, res, Permission.CAN_VIEW_ITEMS));
         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(getItem(req, res))));
@@ -146,6 +162,7 @@ public class ItemEndpoint extends Endpoint {
     }
 
     private String updateItem(Request req, Response res) {
+        //todo fix
         before("", this.checkPermission(req, res, Permission.CAN_EDIT_ITEMS));
         before("", this::isItemExist);
         ItemEntity item = this.objectFromBody(req, ItemEntity.class);
@@ -251,20 +268,43 @@ public class ItemEndpoint extends Endpoint {
         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Returned Item with ID " + req.params(":id")));
     }
 
-    private String newItem(Request request, Response response) {
-        before("", Authentication.checkPermission(request, response, Permission.CAN_CREATE_ITEMS));
-        ItemEntity item = this.objectFromBody(request, ItemEntity.class);
+    private String updateItemCheckout(Request req, Response res) {
+        before("", Authentication.checkPermission(req, res, Permission.CAN_EDIT_CHECKOUTS));
+        CheckoutEntity checkout = getCheckout(req, res);
+        assert checkout != null;
 
-        assert item != null;
+        CheckoutEntity newCheckout = objectFromBody(req, CheckoutEntity.class);
+        assert newCheckout != null;
+
+        checkout.setActive(newCheckout.isActive() == null ? checkout.isActive() : newCheckout.isActive());
+        checkout.setBy((newCheckout.getBy() == null || newCheckout.getBy().isEmpty() || newCheckout.getBy().isBlank()) ? checkout.getBy() : newCheckout.getBy());
+        checkout.setDate(newCheckout.getDate() == null ? checkout.getDate() : newCheckout.getDate());
+        checkout.setReturnDate(newCheckout.getReturnDate() == null ? checkout.getReturnDate() : newCheckout.getReturnDate());
+        checkout.setReason((newCheckout.getReason() == null || newCheckout.getReason().isEmpty() || newCheckout.getReason().isBlank()) ? checkout.getReason() : newCheckout.getReason());
 
         try {
-            item.create();
+            checkout.getItem().update();
         } catch (SQLException e) {
-            e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
 
-        response.status(201);
-        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Created item with ID "+ item.getId(), gson.toJsonTree(item)));
+        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Updated checkout with ID " + req.params(":checkoutId")));
+    }
+
+    private String deleteItemCheckout(Request req, Response res) {
+        before("", Authentication.checkPermission(req, res, Permission.CAN_EDIT_CHECKOUTS));
+        CheckoutEntity checkout = getCheckout(req, res);
+        assert checkout != null;
+
+        ItemEntity item = checkout.getItem();
+        item.removeCheckoutEntity(checkout);
+
+        try {
+            item.update();
+        } catch (SQLException e) {
+            end(500, ResponseStatus.ERROR, "Internal Server Error");
+        }
+
+        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Updated checkout with ID " + req.params(":checkoutId")));
     }
 }

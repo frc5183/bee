@@ -34,8 +34,9 @@ public class UserEndpoint extends Endpoint {
 
             post("/login", this::loginUser);
 
-            get("/all", this::getAllUsers);
+//            get("/all", this::getAllUsers);
             get("/all?limit=:limit", this::getAllUsers);
+            get("/all?limit=:limit&offset=:offset", this::getAllUsers);
 
             path("/:id", () -> {
 //                before(Authentication::authenticate);
@@ -206,27 +207,21 @@ public class UserEndpoint extends Endpoint {
     private String getAllUsers(Request req, Response res) {
         before("", this.checkPermission(req, res, Role.ADMIN));
 
-        List<UserEntity> users = null;
         try {
-            users = UserEntity.getAllUserEntities();
+            if (req.queryParams(":limit") != null && !req.queryParams(":limit").isEmpty()) {
+                if (req.queryParams(":offset") != null && !req.queryParams(":offset").isEmpty()) {
+                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(UserEntity.getAllUserEntities(Long.parseLong(req.queryParams(":limit")), Long.parseLong(req.queryParams(":offset"))))));
+                } else {
+                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(UserEntity.getAllUserEntities(Long.parseLong(req.queryParams(":limit"))))));
+                }
+            }
+            return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(UserEntity.getAllUserEntities())));
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
-        if (users == null) end(200, ResponseStatus.SUCCESS, gson.toJsonTree(users));
-        assert users != null;
 
-        if (req.params(":limit") != null && !req.params(":limit").isEmpty()) {
-            List<UserEntity> usersCopy = new ArrayList<>(Integer.parseInt(req.params(":limit")));
-            for (int i = 0; i < users.size(); i++) {
-                usersCopy.add(users.get(i));
-                if (i >= Integer.parseInt(req.params(":limit"))) {
-                    break;
-                }
-            }
-            return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(usersCopy)));
-        }
-        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(users)));
+        return null;
     }
 
     private String getSelfUser(Request req, Response res) {

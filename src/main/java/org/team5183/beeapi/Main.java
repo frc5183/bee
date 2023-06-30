@@ -7,10 +7,9 @@ import org.team5183.beeapi.endpoints.ItemEndpoint;
 import org.team5183.beeapi.endpoints.MiscEndpoint;
 import org.team5183.beeapi.endpoints.UserEndpoint;
 import org.team5183.beeapi.entities.UserEntity;
-import org.team5183.beeapi.runnables.DatabaseRequestRunnable;
+import org.team5183.beeapi.runnables.DatabaseRunnable;
 import org.team5183.beeapi.threading.ThreadingManager;
 
-import javax.xml.crypto.Data;
 import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
@@ -21,7 +20,7 @@ import java.util.Random;
 import static spark.Spark.*;
 
 public class Main {
-    public static final Logger logger = LogManager.getLogger(Main.class);
+    private static final Logger logger = LogManager.getLogger(Main.class);
 
     public static void main(String[] args) throws SQLException, IOException, NoSuchAlgorithmException, InvalidKeySpecException {
         // Check if JWT_SECRET is set, we need this, and it's not something we should randomly generate.
@@ -34,12 +33,14 @@ public class Main {
         ipAddress(System.getenv("IP") != null ? System.getenv("IP") : "localhost");
         port(System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 5050);
 
-        new Thread(new ThreadingManager()).start();
+        Thread tm = new Thread(new ThreadingManager());
+        tm.setName("Threading Manager");
+        tm.start();
 
         // Add threading tasks
-        ThreadingManager.addTask(new DatabaseRequestRunnable());
+        ThreadingManager.addTask(new DatabaseRunnable());
 
-        while (!DatabaseRequestRunnable.getReady().isDone()) {
+        while (!DatabaseRunnable.getReady().isDone()) {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
