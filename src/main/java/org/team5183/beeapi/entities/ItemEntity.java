@@ -4,56 +4,55 @@ import com.google.gson.Gson;
 import com.google.gson.annotations.Expose;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.team5183.beeapi.runnables.DatabaseRunnable;
 
-import javax.persistence.*;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 @DatabaseTable(tableName = "bee_items")
-public class ItemEntity {
+public class ItemEntity implements Entity {
     @Expose(serialize = true, deserialize = false)
     @DatabaseField(generatedId = true)
-    private @NotNull Long id;
+    private Long id;
 
     @Expose
     @DatabaseField(canBeNull = false)
-    private @NotNull String name;
+    private String name;
 
     @Expose
     @DatabaseField(canBeNull = false)
-    private @NotNull String description;
-
-    @Expose
-    @Column(nullable = false)
-    private @NotNull String photo;
+    private String description;
 
     @Expose
     @DatabaseField(canBeNull = false)
-    private @NotNull Double price;
+    private String photo;
+
+    @Expose
+    @DatabaseField(canBeNull = false)
+    private Double price;
 
     @Expose
     @DatabaseField(canBeNull = true)
-    private @NotNull String retailer;
+    private String retailer;
 
     @Expose
     @DatabaseField(canBeNull = true)
-    private @NotNull String partNumber;
+    private String partNumber;
 
     @DatabaseField(canBeNull = true)
     public @Nullable String checkout;
 
     @DatabaseField(canBeNull = false)
-    public @NotNull String checkouts;
+    public String checkouts;
 
     private transient @Nullable CheckoutEntity checkoutEntity;
 
-    private transient @NotNull HashMap<Long, CheckoutEntity> checkoutEntities;
+    private transient HashMap<Long, CheckoutEntity> checkoutEntities;
 
 
     /**
@@ -64,7 +63,7 @@ public class ItemEntity {
      * @param retailer    The retailer of the item
      * @param partNumber  The part number of the item
      */
-    public ItemEntity(@NotNull String name, @NotNull String description, @NotNull String photo, @NotNull Double price, @Nullable String retailer, @Nullable String partNumber) {
+    public ItemEntity(String name, String description, String photo, Double price, String retailer, String partNumber) {
         this.name = name;
         this.description = description;
         this.photo = photo;
@@ -75,147 +74,214 @@ public class ItemEntity {
         this.checkouts = new Gson().toJson(checkoutEntities);
     }
 
-
     /**
-     * This constructor is and should only be used by JPA and ORMLite.
+     *  Default constructor for ORMLite.
      */
-    private ItemEntity() {
-        if (checkouts == null || checkouts.isBlank() || checkouts.isEmpty()) {
-            checkouts = "";
-            this.checkoutEntities = new HashMap<>();
-        } else {
-            checkoutEntities = new Gson().fromJson(checkouts, HashMap.class);
-        }
-
-        checkoutEntity = new Gson().fromJson(checkout, CheckoutEntity.class);
+    public ItemEntity() {
+        this.checkouts = "";
     }
 
 
     /**
-     * Gets the user with the specified ID.
-     * @param id The ID of the user.
-     * @return The user with the specified ID, or null if no user exists with that ID.
+     * Gets the item with the specified ID.
+     * @param id The ID of the item.
+     * @return The item with the specified ID, or null if no item exists with that ID.
      * @throws SQLException If an error occurs while querying the database.
      */
     @Nullable
     public static ItemEntity getItemEntity(long id) throws SQLException {
-        CompletableFuture<ItemEntity> future = DatabaseRunnable.itemQuery(DatabaseRunnable.getItemDao().queryBuilder().where().eq("id", id).prepare());
-        AtomicReference<ItemEntity> itemEntity = new AtomicReference<>();
+        CompletableFuture<Optional<List<ItemEntity>>> future = DatabaseRunnable.itemRequest(new DatabaseRunnable.DatabaseRequest<>(DatabaseRunnable.getItemDao().queryBuilder().where().eq("id", id).prepare()));
+        AtomicReference<Optional<List<ItemEntity>>> entities = new AtomicReference<>();
         AtomicReference<Throwable> throwable = new AtomicReference<>();
+        if (future.isCancelled()) return null;
+        future.join();
         future.whenComplete((ie, t) -> {
             throwable.set(t);
-            itemEntity.set(ie);
+            entities.set(ie);
         });
+        if (throwable.get() != null) throw (SQLException) throwable.get();
 
-        if (throwable.get() != null) {
-            throw new SQLException(throwable.get());
-        }
-
-        return itemEntity.get();
-    }
-
-    public static List<ItemEntity> getAllItemEntities() throws SQLException {
-        CompletableFuture<List<ItemEntity>> future = DatabaseRunnable.itemQueryMultiple(DatabaseRunnable.getItemDao().queryBuilder().prepare());
-        AtomicReference<List<ItemEntity>> itemEntities = new AtomicReference<>();
-        AtomicReference<Throwable> throwable = new AtomicReference<>();
-        future.whenComplete((ie, t) -> {
-            throwable.set(t);
-            itemEntities.set(ie);
-        });
-
-        if (throwable.get() != null) {
-            throw new SQLException(throwable.get());
-        }
-
-        return itemEntities.get();
+        if (entities.get().isEmpty()) return null;
+        if (entities.get().get().size() > 1 || entities.get().get().size() < 1) return null;
+        return entities.get().get().get(0);
     }
 
     /**
-     * Creates the user in the database.
-     * TODO: make this not like this, allow it to actually run through the database request runnable's cache instead of just forcing synchronization, there isn't a PreparedCreate for this tho so time to innovate!!!
+     * Gets a list of all items in the database.
+     * @return A list of all items in the database.
+     * @throws SQLException If an error occurs while querying the database.
+     * @see #getAllItemEntities(long)
+     * @see #getAllItemEntities(int, int)
+     */
+    public static List<ItemEntity> getAllItemEntities() throws SQLException {
+        CompletableFuture<Optional<List<ItemEntity>>> future = DatabaseRunnable.itemRequest(new DatabaseRunnable.DatabaseRequest<>(DatabaseRunnable.getItemDao().queryBuilder().prepare()));
+        AtomicReference<Optional<List<ItemEntity>>> entities = new AtomicReference<>();
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+        future.join();
+        future.whenComplete((ie, t) -> {
+            throwable.set(t);
+            entities.set(ie);
+        });
+        if (throwable.get() != null) throw (SQLException) throwable.get();
+
+        if (entities.get().isEmpty()) return null;
+        if (entities.get().get().size() < 1) return null;
+        return entities.get().get();
+    }
+
+    /**
+     * Gets a list of all items in the database.
+     * @param limit The maximum number of items to return.
+     * @return A list of all users in the database.
+     * @throws SQLException If an error occurs while querying the database.
+     * @see #getAllItemEntities()
+     * @see #getAllItemEntities(int, int)
+     */
+    public static List<ItemEntity> getAllItemEntities(long limit) throws SQLException {
+        CompletableFuture<Optional<List<ItemEntity>>> future = DatabaseRunnable.itemRequest(new DatabaseRunnable.DatabaseRequest<>(DatabaseRunnable.getItemDao().queryBuilder().limit(limit).prepare()));
+        AtomicReference<Optional<List<ItemEntity>>> entities = new AtomicReference<>();
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+        future.join();
+        future.whenComplete((ie, t) -> {
+            throwable.set(t);
+            entities.set(ie);
+        });
+        if (throwable.get() != null) throw (SQLException) throwable.get();
+
+        if (entities.get().isEmpty()) return null;
+        if (entities.get().get().size() < 1) return null;
+        return entities.get().get();
+    }
+
+    /**
+     * @param limit The maximum number of users to return.
+     * @param offset The offset to start at.
+     * @return A list of all users in the database.
+     * @throws SQLException If an error occurs while querying the database.
+     * @see #getAllItemEntities()
+     * @see #getAllItemEntities(long)
+     */
+    public static List<ItemEntity> getAllItemEntities(int limit, int offset) throws SQLException {
+        CompletableFuture<Optional<List<ItemEntity>>> future = DatabaseRunnable.itemRequest(new DatabaseRunnable.DatabaseRequest<>(DatabaseRunnable.getItemDao().queryBuilder().prepare()));
+        AtomicReference<Optional<List<ItemEntity>>> entities = new AtomicReference<>();
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+        future.join();
+        future.whenComplete((ie, t) -> {
+            throwable.set(t);
+            entities.set(ie);
+        });
+        if (throwable.get() != null) throw (SQLException) throwable.get();
+
+        if (entities.get().isEmpty()) return null;
+        if (entities.get().get().size() < 1) return null;
+
+        List<ItemEntity> itemEntities = entities.get().get().subList(offset, entities.get().get().size());
+        if (itemEntities.size() > limit) itemEntities = itemEntities.subList(0, limit);
+        return itemEntities;
+    }
+
+    /**
+     * Creates the item in the database.
      * @throws SQLException If an error occurs while creating the user in the database.
      */
     public synchronized void create() throws SQLException {
-        DatabaseRunnable.getItemDao().createOrUpdate(this);
+        CompletableFuture<Optional<List<ItemEntity>>> future = DatabaseRunnable.itemRequest(new DatabaseRunnable.DatabaseRequest<>(this, DatabaseRunnable.DatabaseRequest.RequestType.INSERT));
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+
+        future.join();
+        future.whenComplete((ie, t) -> throwable.set(t));
+
+        if (throwable.get() != null) throw (SQLException) throwable.get();
     }
 
     /**
-     * Updates the user in the database.
+     * Updates the item in the database.
      * @throws SQLException If an error occurs while updating the user in the database.
      */
     public void update() throws SQLException {
-        DatabaseRunnable.itemStatement(DatabaseRunnable.getItemDao().updateBuilder().where().eq("id", this.id).prepare());
+        CompletableFuture<Optional<List<ItemEntity>>> future = DatabaseRunnable.itemRequest(new DatabaseRunnable.DatabaseRequest<>(this, DatabaseRunnable.DatabaseRequest.RequestType.UPDATE));
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
+
+        future.join();
+        future.whenComplete((ie, t) -> throwable.set(t));
+
+        if (throwable.get() != null) throw (SQLException) throwable.get();
     }
 
     /**
-     * Deletes the user from the database.
+     * Deletes the item from the database.
      * @throws SQLException If an error occurs while deleting the user from the database.
      */
     public void delete() throws SQLException {
-        DatabaseRunnable.itemStatement(DatabaseRunnable.getItemDao().deleteBuilder().where().eq("id", this.id).prepare());
-    }
+        CompletableFuture<Optional<List<ItemEntity>>> future = DatabaseRunnable.itemRequest(new DatabaseRunnable.DatabaseRequest<>(DatabaseRunnable.getItemDao().deleteBuilder().where().eq("id", this.id).prepare()));
+        AtomicReference<Throwable> throwable = new AtomicReference<>();
 
+        future.join();
+        future.whenComplete((ie, t) -> throwable.set(t));
+
+        if (throwable.get() != null) throw (SQLException) throwable.get();
+    }
 
     /**
      * @return The ID of the item
      */
-    public synchronized @NotNull Long getId() {
+    public synchronized Long getId() {
         return id;
     }
 
     /**
      * @return The name of the item
      */
-    public synchronized @NotNull String getName() {
+    public synchronized String getName() {
         return name;
     }
 
     /**
      * @param name The new name of the item
      */
-    public synchronized void setName(@NotNull String name) {
+    public synchronized void setName(String name) {
         this.name = name;
     }
 
     /**
      * @return The description of the item
      */
-    public synchronized @NotNull String getDescription() {
+    public synchronized String getDescription() {
         return description;
     }
 
     /**
      * @param description The new description of the item
      */
-    public synchronized void setDescription(@NotNull String description) {
+    public synchronized void setDescription(String description) {
         this.description = description;
     }
 
     /**
      * @return The URL of the photo of the item
      */
-    public synchronized @NotNull String getPhoto() {
+    public synchronized String getPhoto() {
         return photo;
     }
 
     /**
      * @param photo The new URL of the photo of the item
      */
-    public synchronized void setPhoto(@NotNull String photo) {
+    public synchronized void setPhoto(String photo) {
         this.photo = photo;
     }
 
     /**
      * @return The price of the item
      */
-    public synchronized @NotNull Double getPrice() {
+    public synchronized Double getPrice() {
         return price;
     }
 
     /**
      * @param price The new price of the item
      */
-    public synchronized void setPrice(@NotNull Double price) {
+    public synchronized void setPrice(Double price) {
         this.price = price;
     }
 
@@ -264,14 +330,14 @@ public class ItemEntity {
     /**
      * @return The checkouts of the item
      */
-    public synchronized @NotNull String getCheckouts() {
+    public synchronized String getCheckouts() {
         return checkouts;
     }
 
     /**
      * @param checkouts The new checkouts of the item
      */
-    public synchronized void setCheckouts(@NotNull String checkouts) {
+    public synchronized void setCheckouts(String checkouts) {
         this.checkouts = checkouts;
     }
 
@@ -304,14 +370,15 @@ public class ItemEntity {
     /**
      * @return The checkout entities of the item
      */
-    public synchronized @NotNull HashMap<Long, CheckoutEntity> getCheckoutEntities() {
+    public synchronized HashMap<Long, CheckoutEntity> getCheckoutEntities() {
+        if (checkoutEntities == null) checkoutEntities = new HashMap<>();
         return checkoutEntities;
     }
 
     /**
      * @param checkout The checkout entity to add to the item
      */
-    public synchronized void addCheckoutEntity(@NotNull CheckoutEntity checkout) {
+    public synchronized void addCheckoutEntity(CheckoutEntity checkout) {
         this.checkoutEntities.put(checkout.getId(), checkout);
         this.checkouts = new Gson().toJson(checkoutEntities);
     }
@@ -319,7 +386,7 @@ public class ItemEntity {
     /**
      * @param checkout The checkout entity to remove from the item
      */
-    public synchronized void removeCheckoutEntity(@NotNull CheckoutEntity checkout) {
+    public synchronized void removeCheckoutEntity(CheckoutEntity checkout) {
         this.checkoutEntities.remove(checkout.getId());
         this.checkouts = new Gson().toJson(checkoutEntities);
     }
@@ -327,8 +394,19 @@ public class ItemEntity {
     /**
      * @param checkoutEntities The new checkout entities of the item
      */
-    public synchronized void setCheckoutEntities(@NotNull HashMap<Long, CheckoutEntity> checkoutEntities) {
+    public synchronized void setCheckoutEntities(HashMap<Long, CheckoutEntity> checkoutEntities) {
         this.checkouts = new Gson().toJson(checkoutEntities);
         this.checkoutEntities = checkoutEntities;
+    }
+
+    /**
+     * Checks if the ItemEntity is valid.
+     * @return Whether the ItemEntity is valid
+     */
+    public boolean isValid() {
+        return this.name != null && !this.name.isEmpty() &&
+                this.description != null &&
+                this.photo != null &&
+                this.price != null;
     }
 }

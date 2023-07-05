@@ -1,39 +1,38 @@
 package org.team5183.beeapi.entities;
 
 import com.google.gson.annotations.Expose;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class CheckoutEntity {
+public class CheckoutEntity implements Entity {
     @Expose(serialize = true, deserialize = false)
-    private @NotNull Long id;
+    private Long id;
 
-    private @NotNull ItemEntity item;
-
-    @Expose
-    private @NotNull String by;
+    private ItemEntity item;
 
     @Expose
-    private @NotNull String reason;
+    private String by;
 
     @Expose
-    private @NotNull Long date;
+    private String reason;
+
+    @Expose
+    private Long date;
 
     @Expose
     private @Nullable Long returnDate;
 
     @Expose
-    private @NotNull Boolean active;
+    private Boolean active;
 
     /**
      * @param by The name of the person who checked out the item
      * @param date The date the item was checked in milliseconds since epoch
      */
-    public CheckoutEntity(@NotNull ItemEntity item, @NotNull String by, @Nullable String reason, @NotNull Long date) {
+    public CheckoutEntity(ItemEntity item, String by, String reason, Long date) {
         this.id = (item.getCheckoutEntities().size() + 1L);
         this.item = item;
         this.by = by;
-        this.reason = reason == null ? "" : reason;
+        this.reason = reason;
         this.date = date;
         this.active = true;
     }
@@ -41,70 +40,70 @@ public class CheckoutEntity {
     /**
      * @return The name of the person who checked out the item
      */
-    public synchronized @NotNull String getBy() {
+    public synchronized String getBy() {
         return by;
     }
 
     /**
      * @return The ID of the checkout
      */
-    public @NotNull Long getId() {
+    public Long getId() {
         return id;
     }
 
     /**
      * @param id The ID of the checkout
      */
-    public void setId(@NotNull Long id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
     /**
      * @return The item that was checked out
      */
-    public @NotNull ItemEntity getItem() {
+    public ItemEntity getItem() {
         return item;
     }
 
     /**
      * @param item The item that was checked out
      */
-    public void setItem(@NotNull ItemEntity item) {
+    public void setItem(ItemEntity item) {
         this.item = item;
     }
 
     /**
      * @param by The name of the person who checked out the item
      */
-    public synchronized void setBy(@NotNull String by) {
+    public synchronized void setBy(String by) {
         this.by = by;
     }
 
     /**
      * @return The reason the item was checked out
      */
-    public synchronized @NotNull String getReason() {
+    public synchronized String getReason() {
         return reason;
     }
 
     /**
      * @param reason The reason the item was checked out
      */
-    public synchronized void setReason(@NotNull String reason) {
+    public synchronized void setReason(String reason) {
         this.reason = reason;
     }
 
     /**
      * @return The date the item was checked in milliseconds since epoch
      */
-    public synchronized @NotNull Long getDate() {
+    public synchronized Long getDate() {
         return date;
     }
 
     /**
      * @param date The date the item was checked in milliseconds since epoch
      */
-    public synchronized void setDate(@NotNull Long date) {
+    public synchronized void setDate(Long date) {
         this.date = date;
     }
 
@@ -125,14 +124,19 @@ public class CheckoutEntity {
     /**
      * @return Whether the item is currently checked out
      */
-    public synchronized @NotNull Boolean isActive() {
+    public synchronized Boolean isActive() {
         return active;
     }
 
     /**
      * @param active Whether the item is currently checked out
      */
-    public synchronized void setActive(@NotNull Boolean active) {
+    public synchronized void setActive(Boolean active) {
         this.active = active;
+    }
+
+    @Override
+    public boolean isValid() {
+        return false;
     }
 }

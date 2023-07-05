@@ -8,26 +8,22 @@ import org.team5183.beeapi.runnables.NamedRunnable.RunnableType;
 import org.team5183.beeapi.runnables.RepeatedRunnable;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class ThreadingManager extends Thread {
     private static final Logger logger = LogManager.getLogger(ThreadingManager.class);
 
     private static final LinkedBlockingQueue<NamedRunnable> queue = new LinkedBlockingQueue<>();
-    private static final HashMap<NamedRunnable, Thread> threads = new HashMap<>();
+    private static final ConcurrentHashMap<NamedRunnable, Thread> threads = new ConcurrentHashMap<>();
 
-    private static final HashMap<NamedRunnable, Integer> endAttempts = new HashMap<>();
+    private static final ConcurrentHashMap<NamedRunnable, Integer> endAttempts = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<NamedRunnable, Long> lastDamagedMessage = new ConcurrentHashMap<>();
 
     private static final int maxThreads = (System.getenv("maxThreads") == null || System.getenv("maxThreads").isEmpty() || System.getenv("maxThreads").isBlank()) ? 20 : Integer.parseInt(System.getenv("maxThreads"));
-
     private static final int maxEndAttempts = (System.getenv("maxEndAttempts") == null || System.getenv("maxEndAttempts").isEmpty() || System.getenv("maxEndAttempts").isBlank()) ? 5 : Integer.parseInt(System.getenv("maxEndAttempts"));
     private static final int maxOneshotEndAttempts = (System.getenv("maxOneshotEndAttempts") == null || System.getenv("maxOneshotEndAttempts").isEmpty() || System.getenv("maxOneshotEndAttempts").isBlank()) ? 20 : Integer.parseInt(System.getenv("maxOneshotEndAttempts"));
-
-
-    private static final HashMap<NamedRunnable, Long> lastDamagedMessage = new HashMap<>();
 
     private static RunnableStatus status;
 
@@ -46,6 +42,7 @@ public class ThreadingManager extends Thread {
                         if (endAttempts.get(runnable) >= maxOneshotEndAttempts) {
                             logger.error("Oneshot thread " + runnable.getClass().getName() + " has failed to complete after " + maxEndAttempts + " attempts, forcibly ending.");
                             threads.get(runnable).interrupt();
+                            threads.remove(runnable);
                         } else {
                             endAttempts.put(runnable, endAttempts.get(runnable) + 1);
                         }
@@ -58,6 +55,7 @@ public class ThreadingManager extends Thread {
                             if (endAttempts.get(runnable) >= maxEndAttempts) {
                                 logger.error("Thread " + runnable.getClass().getName() + " has failed to end after " + maxEndAttempts + " attempts, forcibly ending.");
                                 threads.get(runnable).interrupt();
+                                threads.remove(runnable);
                             }
                             endAttempts.put(runnable, endAttempts.get(runnable) + 1);
                             rRunnable.shutdown();
@@ -94,25 +92,20 @@ public class ThreadingManager extends Thread {
         thread.start();
     }
 
-
     public static synchronized void addTask(NamedRunnable runnable) {
         if (status == RunnableStatus.ENDING || status == RunnableStatus.ENDED) {
-            logger.warn("Threading manager is ending, cannot add task " + runnable.getClass().getName());
+            logger.warn("Threading manager is ending, cannot add task " + runnable.getName());
             return;
         }
         queue.add(runnable);
     }
 
-    public static synchronized CompletableFuture<String> shutdown() {
-        CompletableFuture<String> future = new CompletableFuture<>();
+    public static RunnableStatus getStatus() {
+        return status;
+    }
+
+    public static synchronized void shutdown() {
         logger.info("Shutting down threading manager");
         status = RunnableStatus.ENDING;
-        while (true) {
-            if (status == RunnableStatus.ENDED || status == RunnableStatus.FAILED) {
-                break;
-            }
-        }
-        future.complete("Threading manager has been shut down");
-        return future;
     }
 }

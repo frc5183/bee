@@ -8,6 +8,7 @@ import org.team5183.beeapi.endpoints.MiscEndpoint;
 import org.team5183.beeapi.endpoints.UserEndpoint;
 import org.team5183.beeapi.entities.UserEntity;
 import org.team5183.beeapi.runnables.DatabaseRunnable;
+import org.team5183.beeapi.runnables.NamedRunnable;
 import org.team5183.beeapi.threading.ThreadingManager;
 
 import java.io.File;
@@ -17,12 +18,13 @@ import java.security.spec.InvalidKeySpecException;
 import java.sql.SQLException;
 import java.util.Random;
 
-import static spark.Spark.*;
+import static spark.Spark.ipAddress;
+import static spark.Spark.port;
 
 public class Main {
     private static final Logger logger = LogManager.getLogger(Main.class);
 
-    public static void main(String[] args) throws SQLException, IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+    public static void main(String[] args) throws SQLException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, InterruptedException {
         // Check if JWT_SECRET is set, we need this, and it's not something we should randomly generate.
         if (System.getenv("JWT_SECRET") == null || System.getenv("JWT_SECRET").isEmpty() || System.getenv("JWT_SECRET").isBlank()) {
             logger.fatal("You must set JWT_SECRET environment variable for signing JWT tokens. This can be any random string however should be treated as a password (as in long and secure). \nIf you lose this it will just cause a minor inconvenience, all users tokens will be invalidated and they will have to log back in.");
@@ -40,13 +42,22 @@ public class Main {
         // Add threading tasks
         ThreadingManager.addTask(new DatabaseRunnable());
 
-        while (!DatabaseRunnable.getReady().isDone()) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+        while (DatabaseRunnable.getReady().isDone()) {}
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            logger.info("Shutting down...");
+            ThreadingManager.shutdown();
+
+            while (ThreadingManager.getStatus() != NamedRunnable.RunnableStatus.ENDED) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
-        }
+            logger.info("Shutdown complete.");
+            System.exit(0);
+        }));
 
 
         // Register endpoints
@@ -75,7 +86,7 @@ public class Main {
             try {
                 // Create a new admin user.
                 new UserEntity("admin", password, "admin@example.com", "Admin", Role.ADMIN).create();
-            } catch (SQLException e) {
+            } catch (Exception e) {
                 logger.fatal("Failed to create admin user, exiting.");
                 init.delete();
                 System.exit(1);

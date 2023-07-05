@@ -1,7 +1,6 @@
 package org.team5183.beeapi.runnables;
 
 import com.j256.ormlite.dao.Dao;
-import com.j256.ormlite.stmt.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -9,86 +8,64 @@ import org.team5183.beeapi.entities.UserEntity;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class DatabaseUserRequestOneshot extends OneshotRunnable {
     private static final Logger logger = LogManager.getLogger(DatabaseUserRequestOneshot.class);
 
-    private final PreparedStmt<UserEntity> statement;
-    private final Dao<UserEntity, Long> dao;
+    private final DatabaseRunnable.DatabaseRequest<UserEntity> request;
+    private final CompletableFuture<Optional<List<UserEntity>>> future;
 
-    private CompletableFuture<UserEntity> singleFuture;
-    private CompletableFuture<List<UserEntity>> multipleFuture;
-    private CompletableFuture<Integer> basicFuture;
-
-    public DatabaseUserRequestOneshot(PreparedStmt<UserEntity> statement) {
-        super();
-        this.statement = statement;
-        this.dao = DatabaseRunnable.getUserDao();
-    }
-
-    public void setSingleFuture(CompletableFuture<UserEntity> future) {
-        this.singleFuture = future;
-    }
-
-    public void setMultipleFuture(CompletableFuture<List<UserEntity>> future) {
-        this.multipleFuture = future;
-    }
-
-    public void setBasicFuture(CompletableFuture<Integer> future) {
-        this.basicFuture = future;
+    public DatabaseUserRequestOneshot(DatabaseRunnable.DatabaseRequest<UserEntity> request, CompletableFuture<Optional<List<UserEntity>>> future) {
+        this.request = request;
+        this.future = future;
     }
 
     @Override
     public void run() {
-        if (this.singleFuture == null && this.multipleFuture == null && this.basicFuture == null) {
-            this.setStatus(RunnableStatus.FAILED);
-            logger.error("No futures were set for the request.");
+        Dao<UserEntity, Long> dao = DatabaseRunnable.getUserDao();
+        try {
+            switch (request.getType()) {
+                case SELECT -> {
+                    if (request.getQuery() == null)
+                        throw new NullPointerException("Query cannot be null on a SELECT request");
+                    List<UserEntity> entities = dao.query(request.getQuery());
+                    future.complete(Optional.of(entities));
+                }
+                case DELETE -> {
+                    if (request.getDelete() == null)
+                        throw new NullPointerException("Delete cannot be null on a DELETE request");
+                    dao.delete(request.getDelete());
+                    future.complete(Optional.empty());
+                }
+                case INSERT -> {
+                    if (request.getEntity() == null)
+                        throw new NullPointerException("Entity cannot be null on a INSERT request");
+                    dao.createIfNotExists(request.getEntity());
+                    future.complete(Optional.empty());
+                }
+                case UPDATE -> {
+                    if (request.getEntity() == null)
+                        throw new NullPointerException("Update cannot be null on a UPDATE request");
+                    dao.update(request.getEntity());
+                    future.complete(Optional.empty());
+                }
+                case UPSERT -> {
+                    if (request.getEntity() == null)
+                        throw new NullPointerException("Entity cannot be null on a UPSERT request");
+                    dao.createOrUpdate(request.getEntity());
+                    future.complete(Optional.empty());
+                }
+                default -> throw new IllegalArgumentException("Invalid request type");
+            }
+        } catch (SQLException e) {
+            future.completeExceptionally(e);
+            this.status = RunnableStatus.FAILED;
             return;
         }
 
-        if (this.singleFuture != null && this.statement.getType() == StatementBuilder.StatementType.SELECT) {
-            try {
-                this.singleFuture.complete(dao.queryForFirst((PreparedQuery<UserEntity>) statement));
-            } catch (SQLException e) {
-                this.singleFuture.completeExceptionally(e);
-            }
-        }
-
-        if (this.multipleFuture != null && this.statement.getType() == StatementBuilder.StatementType.SELECT) {
-            try {
-                this.multipleFuture.complete(dao.query((PreparedQuery<UserEntity>) statement));
-            } catch (SQLException e) {
-                this.multipleFuture.completeExceptionally(e);
-            }
-        }
-
-        if (this.basicFuture != null) {
-            switch (this.statement.getType()) {
-                case UPDATE:
-                    try {
-                        this.basicFuture.complete(dao.update((PreparedUpdate<UserEntity>) statement));
-                    } catch (SQLException e) {
-                        this.basicFuture.completeExceptionally(e);
-                    }
-                case DELETE:
-                    try {
-                        this.basicFuture.complete(dao.delete((PreparedDelete<UserEntity>) statement));
-                    } catch (SQLException e) {
-                        this.basicFuture.completeExceptionally(e);
-                    }
-                case EXECUTE:
-                    try {
-                        this.basicFuture.complete(dao.executeRawNoArgs(statement.getStatement()));
-                    } catch (SQLException e) {
-                        this.basicFuture.completeExceptionally(e);
-                    }
-                default:
-
-            }
-        }
-
-        this.setStatus(RunnableStatus.ENDED);
+        this.status = RunnableStatus.ENDED;
     }
 
     @Override

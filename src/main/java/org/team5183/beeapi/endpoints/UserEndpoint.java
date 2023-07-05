@@ -7,7 +7,6 @@ import org.team5183.beeapi.authentication.HashPassword;
 import org.team5183.beeapi.authentication.JWTManager;
 import org.team5183.beeapi.constants.Permission;
 import org.team5183.beeapi.constants.Role;
-import org.team5183.beeapi.entities.ItemEntity;
 import org.team5183.beeapi.entities.UserEntity;
 import org.team5183.beeapi.middleware.Authentication;
 import org.team5183.beeapi.response.BasicResponse;
@@ -34,11 +33,10 @@ public class UserEndpoint extends Endpoint {
 
             post("/login", this::loginUser);
 
-//            get("/all", this::getAllUsers);
-            get("/all?limit=:limit", this::getAllUsers);
-            get("/all?limit=:limit&offset=:offset", this::getAllUsers);
+            get("/all", this::getAllUsers);
 
             path("/:id", () -> {
+                //todo fix this lmao
 //                before(Authentication::authenticate);
 //                before("", (req,res) -> Authentication.checkPermission(req, res, Role.ADMIN));
 
@@ -207,12 +205,34 @@ public class UserEndpoint extends Endpoint {
     private String getAllUsers(Request req, Response res) {
         before("", this.checkPermission(req, res, Role.ADMIN));
 
+        if (req.queryParams("limit") == null) {
+            try {
+                return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(UserEntity.getAllUserEntities())));
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        Long limit = null;
         try {
-            if (req.queryParams(":limit") != null && !req.queryParams(":limit").isEmpty()) {
-                if (req.queryParams(":offset") != null && !req.queryParams(":offset").isEmpty()) {
-                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(UserEntity.getAllUserEntities(Long.parseLong(req.queryParams(":limit")), Long.parseLong(req.queryParams(":offset"))))));
+            limit = req.queryParams("limit") == null ? null : Long.parseLong(req.queryParams("limit"));
+        } catch (NumberFormatException e) {
+            end(400, ResponseStatus.ERROR, "Limit must be a number.");
+        }
+
+        Long offset = null;
+        try {
+            offset = req.queryParams("offset") == null ? null : Long.parseLong(req.queryParams("offset"));
+        } catch (NumberFormatException e) {
+            end(400, ResponseStatus.ERROR, "Offset must be a number.");
+        }
+
+        try {
+            if (limit != null) {
+                if (offset != null) {
+                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(UserEntity.getAllUserEntities(limit.intValue(), offset.intValue()))));
                 } else {
-                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(UserEntity.getAllUserEntities(Long.parseLong(req.queryParams(":limit"))))));
+                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(UserEntity.getAllUserEntities(limit))));
                 }
             }
             return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(UserEntity.getAllUserEntities())));
@@ -330,13 +350,13 @@ public class UserEndpoint extends Endpoint {
         for (String token : tokensList) {
             try {
                 token = token.replace("Bearer ", "");
-                if (UserEntity.getUserEntityByToken(token) == null) {
+                UserEntity user = UserEntity.getUserEntityByToken(token);
+                if (user == null) {
                     tokens.remove(token);
-                } else {
-                    UserEntity user = UserEntity.getUserEntityByToken(token);
-                    user.setToken("");
-                    user.update();
+                    continue;
                 }
+                user.setToken("");
+                user.update();
             } catch (SQLException e) {
                 e.printStackTrace();
                 end(500, ResponseStatus.ERROR, "Internal Server Error");

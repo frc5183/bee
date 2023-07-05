@@ -14,7 +14,6 @@ import spark.Response;
 import spark.Spark;
 
 import java.lang.reflect.Type;
-import java.sql.SQLException;
 
 import static spark.Spark.halt;
 
@@ -58,7 +57,7 @@ public abstract class Endpoint {
      * @see Endpoint#jsonFromBody(Request)
      * @see Gson#fromJson(String, Class)
      */
-    <T> T objectFromBody(Request request,  Class<T> clazz) {
+    <T> T objectFromBody(Request request, Class<T> clazz) {
         T object = null;
         try {
             object = gson.fromJson(request.body(), (Type) clazz);
@@ -194,7 +193,7 @@ public abstract class Endpoint {
         UserEntity user = null;
         try {
             user = UserEntity.getUserEntityByToken(token);
-        } catch (SQLException e) {
+        } catch (Exception e) {
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
 

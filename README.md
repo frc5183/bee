@@ -9,10 +9,11 @@ Click the most recent workflow run and download BeeAPI.jar found in the artifact
 
 # TODO
 - [ ] Full Multithreading
-- [ ] Allow administrators to modify, add, remove users.
+- [X] Allow administrators to modify, add, remove users.
 - [ ] Test everything and make sure it actually works.
 - [X] Add offset to inventory items.
-- [ ] Add offset to get all users.
-- [ ] MULTITHREADING: Redo DatabaseRequestRunnable to make a new thread for each request in the cache/wait pool.
-- [ ] MULTITHREADING: Allow new types of custom runnables (e.g. ONESHOT, REPEATED, etc. and only stop ones that are REPEATED and force stop ONESHOT when it takes to long).\
+- [X] Add offset to get all users.
+- [X] MULTITHREADING: Redo DatabaseRequestRunnable to make a new thread for each request in the cache/wait pool.
+- [X] MULTITHREADING: Allow new types of custom runnables (e.g. ONESHOT, REPEATED, etc. and only stop ones that are REPEATED and force stop ONESHOT when it takes to long).\
 - [ ] MULTITHREADING: Instead of trying all kind of PreparedStmt, we only do PreparedQuery and for update and insert we just take the Entity? 
+- [ ] Verify if an entity is actually valid.

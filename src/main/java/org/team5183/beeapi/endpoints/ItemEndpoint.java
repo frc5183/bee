@@ -14,8 +14,6 @@ import spark.Response;
 
 import java.sql.SQLException;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 
 import static spark.Spark.*;
 
@@ -27,9 +25,6 @@ public class ItemEndpoint extends Endpoint {
         path("/items" , () -> {
             before("*", this::authenticate);
             get("/all", this::getAllItems);
-            get("/all?limit=:limit", this::getAllItems);
-            get("/all?offset=:offset", this::getAllItems);
-            get("/all?limit=:limit&offset=:offset", this::getAllItems);
             post("/new", "application/json", this::newItem);
 
             path("/:id", () -> {
@@ -97,37 +92,54 @@ public class ItemEndpoint extends Endpoint {
     private String getAllItems(Request req, Response res) {
         before("", this.checkPermission(req, res, Permission.CAN_VIEW_ITEMS));
 
-        List<ItemEntity> items = null;
+        if (req.queryParams("limit") == null) {
+            try {
+                return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(ItemEntity.getAllItemEntities())));
+            } catch (SQLException e) {
+                e.printStackTrace();
+                end(500, ResponseStatus.ERROR, "Internal Server Error");
+            }
+        }
+
+        Long limit = null;
         try {
-            items = ItemEntity.getAllItemEntities();
+            limit = req.queryParams("limit") == null ? null : Long.parseLong(req.queryParams("limit"));
+        } catch (NumberFormatException e) {
+            end(400, ResponseStatus.ERROR, "Limit must be a number.");
+        }
+
+        Long offset = null;
+        try {
+            offset = req.queryParams("offset") == null ? null : Long.parseLong(req.queryParams("offset"));
+        } catch (NumberFormatException e) {
+            end(400, ResponseStatus.ERROR, "Offset must be a number.");
+        }
+
+        try {
+            if (limit != null) {
+                if (offset != null) {
+                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(ItemEntity.getAllItemEntities(limit.intValue(), offset.intValue()))));
+                } else {
+                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(ItemEntity.getAllItemEntities(limit))));
+                }
+            }
+            return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(ItemEntity.getAllItemEntities())));
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
-        if (items == null) end(200, ResponseStatus.SUCCESS, gson.toJsonTree(items));
-        assert items != null;
 
-        // TODO: add a method to call offset or limit directly?
-        if (req.params(":offset") != null && !req.params(":offset").isEmpty()) items = items.subList(Integer.parseInt(req.params(":offset")), items.size());
-
-        if (req.params(":limit") != null && !req.params(":limit").isEmpty()) {
-            List<ItemEntity> itemsCopy = new ArrayList<>(Integer.parseInt(req.params(":limit")));
-            for (int i = 0; i < items.size(); i++) {
-                itemsCopy.add(items.get(i));
-                if (i >= Integer.parseInt(req.params(":limit"))) {
-                    break;
-                }
-            }
-            return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(itemsCopy)));
-        }
-        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(items)));
+        return null;
     }
 
     private String newItem(Request request, Response response) {
         before("", Authentication.checkPermission(request, response, Permission.CAN_CREATE_ITEMS));
         ItemEntity item = this.objectFromBody(request, ItemEntity.class);
-
         assert item != null;
+
+        if (!item.isValid()) {
+            end(400, ResponseStatus.ERROR, "Invalid item data");
+        }
 
         try {
             item.create();
@@ -162,10 +174,23 @@ public class ItemEndpoint extends Endpoint {
     }
 
     private String updateItem(Request req, Response res) {
-        //todo fix
         before("", this.checkPermission(req, res, Permission.CAN_EDIT_ITEMS));
         before("", this::isItemExist);
-        ItemEntity item = this.objectFromBody(req, ItemEntity.class);
+        ItemEntity item = this.getItem(req, res);
+        ItemEntity newItem = this.objectFromBody(req, ItemEntity.class);
+        assert item != null;
+        assert newItem != null;
+
+        if (newItem.getName() != null) item.setName(newItem.getName());
+        if (newItem.getDescription() != null) item.setDescription(newItem.getDescription());
+        if (newItem.getPhoto() != null) item.setPhoto(newItem.getPhoto());
+        if (newItem.getPrice() != null) item.setPrice(newItem.getPrice());
+        if (newItem.getRetailer() != null) item.setRetailer(newItem.getRetailer());
+        if (newItem.getPartNumber() != null) item.setPartNumber(newItem.getPartNumber());
+
+        if (!item.isValid()) {
+            end(400, ResponseStatus.ERROR, "Invalid item data");
+        }
 
         try {
             item.update();

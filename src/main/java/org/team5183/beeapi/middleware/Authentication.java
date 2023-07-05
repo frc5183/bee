@@ -19,7 +19,7 @@ import spark.Response;
 
 import java.sql.SQLException;
 
-import static spark.Spark.*;
+import static spark.Spark.halt;
 
 public class Authentication {
     private static final Logger logger = LogManager.getLogger(Authentication.class);
