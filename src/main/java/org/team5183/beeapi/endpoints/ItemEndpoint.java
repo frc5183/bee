@@ -37,6 +37,8 @@ public class ItemEndpoint extends Endpoint {
                 patch("", "application/json", this::updateItem);
 
                 path("/checkout", () -> {
+                    post("", this::checkoutItem);
+
                     get("/active", this::getItemActiveCheckout);
 
                     get("/all", this::getAllItemCheckouts);
@@ -48,7 +50,6 @@ public class ItemEndpoint extends Endpoint {
                     });
                 });
 
-                post("/checkout", this::checkoutItem);
                 patch("/return", this::returnItem);
             });
         });
@@ -283,6 +284,8 @@ public class ItemEndpoint extends Endpoint {
         checkout.setActive(false);
         checkout.setReturnDate(Instant.now().toEpochMilli());
         item.addCheckoutEntity(checkout);
+
+        if (!checkout.isValid() || !item.isValid()) end(400, ResponseStatus.ERROR, "Invalid return data");
 
         try {
             item.update();
