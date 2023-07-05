@@ -1,14 +1,14 @@
 package org.team5183.beeapi.entities;
 
-import com.google.gson.Gson;
 import com.google.gson.annotations.Expose;
+import com.google.gson.reflect.TypeToken;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
 import org.jetbrains.annotations.Nullable;
 import org.team5183.beeapi.runnables.DatabaseRunnable;
 
 import java.sql.SQLException;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -52,7 +52,7 @@ public class ItemEntity implements Entity {
 
     private transient @Nullable CheckoutEntity checkoutEntity;
 
-    private transient HashMap<Long, CheckoutEntity> checkoutEntities;
+    private transient ArrayList<CheckoutEntity> checkoutEntities;
 
 
     /**
@@ -70,16 +70,18 @@ public class ItemEntity implements Entity {
         this.price = price;
         this.retailer = retailer == null ? "" : retailer;
         this.partNumber = partNumber == null ? "" : partNumber;
-        this.checkoutEntities = new HashMap<>();
-        this.checkouts = new Gson().toJson(checkoutEntities);
+        this.checkoutEntities = new ArrayList<>();
+        this.checkouts = gson.toJson(checkoutEntities);
     }
 
     /**
      *  Default constructor for ORMLite.
      */
     public ItemEntity() {
-        this.checkouts = "";
-        if (this.checkoutEntities == null) this.checkoutEntities = new HashMap<>();
+        checkout = checkouts == null ? "" : checkouts;
+        checkoutEntity = gson.fromJson(checkout, CheckoutEntity.class);
+        checkouts = checkouts == null ? "[]" : checkouts;
+        checkoutEntities = gson.fromJson(checkouts, new TypeToken<ArrayList<CheckoutEntity>>() {}.getType());
     }
 
 
@@ -346,6 +348,7 @@ public class ItemEntity implements Entity {
      * @return The checkout entity of the item
      */
     public synchronized @Nullable CheckoutEntity getCheckoutEntity() {
+        checkoutEntity = gson.fromJson(checkout, CheckoutEntity.class);
         return checkoutEntity;
     }
 
@@ -353,50 +356,56 @@ public class ItemEntity implements Entity {
      * @param checkoutEntity The new checkout entity of the item
      */
     public synchronized void setCheckoutEntity(@Nullable CheckoutEntity checkoutEntity) {
-        this.checkouts = new Gson().toJson(checkoutEntity);
-        this.checkoutEntity = checkoutEntity;
+        this.checkoutEntities = gson.fromJson(checkouts, new TypeToken<ArrayList<CheckoutEntity>>() {}.getType());
 
         if (checkoutEntity != null) {
+            if (checkoutEntities.size() == 0) this.checkoutEntity.setId(1L);
+            else checkoutEntity.setId(this.checkoutEntities.get(this.checkoutEntities.size() - 1).getId() + 1L);
             addCheckoutEntity(checkoutEntity);
         } else {
-            for (CheckoutEntity checkout : checkoutEntities.values()) {
+            this.checkoutEntity = null;
+            for (CheckoutEntity checkout : checkoutEntities) {
                 if (checkout.isActive()) {
                     checkout.setActive(false);
                     break;
                 }
             }
         }
+        this.checkout = gson.toJson(checkoutEntity);
+        this.checkouts = gson.toJson(checkoutEntities);
     }
 
     /**
      * @return The checkout entities of the item
      */
-    public synchronized HashMap<Long, CheckoutEntity> getCheckoutEntities() {
-//        if (checkoutEntities == null) checkoutEntities = new HashMap<>();
-        return checkoutEntities;
+    public synchronized ArrayList<CheckoutEntity> getCheckoutEntities() {
+        this.checkoutEntities = gson.fromJson(checkouts, new TypeToken<ArrayList<CheckoutEntity>>() {}.getType());
+        return this.checkoutEntities;
     }
 
     /**
      * @param checkout The checkout entity to add to the item
      */
     public synchronized void addCheckoutEntity(CheckoutEntity checkout) {
-        this.checkoutEntities.put(checkout.getId(), checkout);
-        this.checkouts = new Gson().toJson(checkoutEntities);
+        this.checkoutEntities = gson.fromJson(checkouts, new TypeToken<ArrayList<CheckoutEntity>>() {}.getType());
+        this.checkoutEntities.add(checkout);
+        this.checkouts = gson.toJson(checkoutEntities);
     }
 
     /**
      * @param checkout The checkout entity to remove from the item
      */
     public synchronized void removeCheckoutEntity(CheckoutEntity checkout) {
-        this.checkoutEntities.remove(checkout.getId());
-        this.checkouts = new Gson().toJson(checkoutEntities);
+        this.checkoutEntities = gson.fromJson(checkouts, new TypeToken<ArrayList<CheckoutEntity>>() {}.getType());
+        this.checkoutEntities.stream().filter(checkoutEntity -> checkoutEntity.getId().equals(checkout.getId())).findFirst().ifPresent(checkoutEntity -> this.checkoutEntities.remove(checkoutEntity));
+        this.checkouts = gson.toJson(checkoutEntities);
     }
 
     /**
      * @param checkoutEntities The new checkout entities of the item
      */
-    public synchronized void setCheckoutEntities(HashMap<Long, CheckoutEntity> checkoutEntities) {
-        this.checkouts = new Gson().toJson(checkoutEntities);
+    public synchronized void setCheckoutEntities(ArrayList<CheckoutEntity> checkoutEntities) {
+        this.checkouts = gson.toJson(checkoutEntities);
         this.checkoutEntities = checkoutEntities;
     }
 

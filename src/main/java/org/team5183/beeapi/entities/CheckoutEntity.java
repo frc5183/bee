@@ -4,7 +4,7 @@ import com.google.gson.annotations.Expose;
 import org.jetbrains.annotations.Nullable;
 
 public class CheckoutEntity implements Entity {
-    @Expose(serialize = true, deserialize = false)
+    @Expose
     private Long id;
 
     private ItemEntity item;
@@ -29,19 +29,12 @@ public class CheckoutEntity implements Entity {
      * @param date The date the item was checked in milliseconds since epoch
      */
     public CheckoutEntity(ItemEntity item, String by, String reason, Long date) {
-        this.id = (item.getCheckoutEntities().size() + 1L);
+        this.id = item.getCheckoutEntities().size() == 0 ? 1L : (item.getCheckoutEntities().get(item.getCheckoutEntities().size() - 1).getId() + 1L);
         this.item = item;
         this.by = by;
         this.reason = reason;
         this.date = date;
         this.active = true;
-    }
-
-    /**
-     * @return The name of the person who checked out the item
-     */
-    public synchronized String getBy() {
-        return by;
     }
 
     /**
@@ -70,6 +63,13 @@ public class CheckoutEntity implements Entity {
      */
     public void setItem(ItemEntity item) {
         this.item = item;
+    }
+
+    /**
+     * @return The name of the person who checked out the item
+     */
+    public synchronized String getBy() {
+        return by;
     }
 
     /**
@@ -137,6 +137,10 @@ public class CheckoutEntity implements Entity {
 
     @Override
     public boolean isValid() {
-        return false;
+        return item != null &&
+                by != null && !by.isEmpty() &&
+                reason != null && !reason.isEmpty() &&
+                date != null && date > 0 &&
+                active != null;
     }
 }

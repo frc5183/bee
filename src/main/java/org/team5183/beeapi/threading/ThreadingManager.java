@@ -36,7 +36,6 @@ public class ThreadingManager extends Thread {
                 finalQueue.forEach(this::startRunnable);
 
                 for (NamedRunnable runnable : threads.keySet()) {
-                    //todo only end repeated runnables if all oneshots are done
                     if (runnable.getType() == RunnableType.ONESHOT) {
                         endAttempts.putIfAbsent(runnable, 0);
                         if (endAttempts.get(runnable) >= maxOneshotEndAttempts) {
@@ -47,7 +46,9 @@ public class ThreadingManager extends Thread {
                             endAttempts.put(runnable, endAttempts.get(runnable) + 1);
                         }
                     }
+                }
 
+                for (NamedRunnable runnable : threads.keySet()) {
                     if (runnable.getType() == RunnableType.REPEATED) {
                         RepeatedRunnable rRunnable = (RepeatedRunnable) runnable;
                         if (rRunnable.getStatus() != RunnableStatus.ENDED) {

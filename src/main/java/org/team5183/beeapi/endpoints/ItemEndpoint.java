@@ -210,7 +210,7 @@ public class ItemEndpoint extends Endpoint {
 
         CheckoutEntity checkout = null;
         try {
-            checkout = item.getCheckoutEntities().get(Long.parseLong(req.params(":checkoutId")));
+            checkout = item.getCheckoutEntities().stream().filter(checkoutEntity -> checkoutEntity.getId() == Long.parseLong(req.params(":checkoutId"))).findFirst().orElse(null);
         } catch (NumberFormatException e) {
             end(400, ResponseStatus.ERROR, "Invalid checkout ID");
         }
@@ -218,6 +218,8 @@ public class ItemEndpoint extends Endpoint {
         if (checkout == null) {
             end(404, ResponseStatus.ERROR, "Checkout with ID " + req.params(":checkoutId") + " not found");
         }
+
+        checkout.setItem(item);
 
         return checkout;
     }
@@ -250,16 +252,22 @@ public class ItemEndpoint extends Endpoint {
         CheckoutEntity checkout = objectFromBody(req, CheckoutEntity.class);
         assert checkout != null;
 
-        checkout.setActive(true);
+        if (item.getCheckoutEntity() != null) end(400, ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " is already checked out");
 
+        checkout.setItem(item);
+        checkout.setActive(true);
+        checkout.setDate(Instant.now().toEpochMilli());
         item.setCheckoutEntity(checkout);
+
+        if (!checkout.isValid() || !item.isValid()) end(400, ResponseStatus.ERROR, "Invalid checkout data");
+
         try {
             item.update();
         } catch (SQLException e) {
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
 
-        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Checked out Item with ID " + req.params(":id")));
+        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Checked out Item with ID " + req.params(":id"), gson.toJsonTree(checkout)));
     }
 
     private String getItemCheckout(Request req, Response res) {
@@ -278,14 +286,10 @@ public class ItemEndpoint extends Endpoint {
         }
         assert checkout != null;
 
-
-        item.setCheckoutEntity(null);
-        item.removeCheckoutEntity(checkout);
         checkout.setActive(false);
-        checkout.setReturnDate(Instant.now().toEpochMilli());
-        item.addCheckoutEntity(checkout);
+        item.setCheckoutEntity(null);
 
-        if (!checkout.isValid() || !item.isValid()) end(400, ResponseStatus.ERROR, "Invalid return data");
+        if (!item.isValid()) end(400, ResponseStatus.ERROR, "Invalid return data");
 
         try {
             item.update();
@@ -293,7 +297,7 @@ public class ItemEndpoint extends Endpoint {
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
 
-        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Returned Item with ID " + req.params(":id")));
+        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Returned Item with ID " + req.params(":id"), gson.toJsonTree(checkout)));
     }
 
     private String updateItemCheckout(Request req, Response res) {
@@ -304,11 +308,23 @@ public class ItemEndpoint extends Endpoint {
         CheckoutEntity newCheckout = objectFromBody(req, CheckoutEntity.class);
         assert newCheckout != null;
 
-        checkout.setActive(newCheckout.isActive() == null ? checkout.isActive() : newCheckout.isActive());
         checkout.setBy((newCheckout.getBy() == null || newCheckout.getBy().isEmpty() || newCheckout.getBy().isBlank()) ? checkout.getBy() : newCheckout.getBy());
+        checkout.setReason((newCheckout.getReason() == null || newCheckout.getReason().isEmpty() || newCheckout.getReason().isBlank()) ? checkout.getReason() : newCheckout.getReason());
         checkout.setDate(newCheckout.getDate() == null ? checkout.getDate() : newCheckout.getDate());
         checkout.setReturnDate(newCheckout.getReturnDate() == null ? checkout.getReturnDate() : newCheckout.getReturnDate());
-        checkout.setReason((newCheckout.getReason() == null || newCheckout.getReason().isEmpty() || newCheckout.getReason().isBlank()) ? checkout.getReason() : newCheckout.getReason());
+
+        if (newCheckout.isActive() != null) {
+            if (newCheckout.isActive() && checkout.getItem().getCheckoutEntity() != null) {
+                end(400, ResponseStatus.ERROR, "Item with ID " + checkout.getItem().getId() + " is already checked out");
+            } else if (newCheckout.isActive()) {
+                checkout.getItem().setCheckoutEntity(checkout);
+            } else if (!newCheckout.isActive()) {
+                checkout.getItem().setCheckoutEntity(null);
+                checkout.setActive(false);
+            }
+        }
+
+        if (!checkout.isValid() || !checkout.getItem().isValid()) end(400, ResponseStatus.ERROR, "Invalid checkout data");
 
         try {
             checkout.getItem().update();
@@ -316,15 +332,17 @@ public class ItemEndpoint extends Endpoint {
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
 
-        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Updated checkout with ID " + req.params(":checkoutId")));
+        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Updated checkout with ID " + req.params(":checkoutId"), gson.toJsonTree(checkout)));
     }
 
     private String deleteItemCheckout(Request req, Response res) {
         before("", Authentication.checkPermission(req, res, Permission.CAN_EDIT_CHECKOUTS));
         CheckoutEntity checkout = getCheckout(req, res);
-        assert checkout != null;
 
         ItemEntity item = checkout.getItem();
+        if (item.getCheckoutEntity() != null) {
+            if (checkout.getId().equals(item.getCheckoutEntity().getId())) end(400, ResponseStatus.ERROR, "Cannot delete active checkout");
+        }
         item.removeCheckoutEntity(checkout);
 
         try {
@@ -333,6 +351,6 @@ public class ItemEndpoint extends Endpoint {
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
 
-        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Updated checkout with ID " + req.params(":checkoutId")));
+        return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Deleted checkout with ID " + req.params(":checkoutId")));
     }
 }

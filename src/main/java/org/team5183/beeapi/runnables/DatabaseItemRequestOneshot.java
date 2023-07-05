@@ -30,8 +30,7 @@ public class DatabaseItemRequestOneshot extends OneshotRunnable {
                 case SELECT -> {
                     if (request.getQuery() == null)
                         throw new NullPointerException("Query cannot be null on a SELECT request");
-                    List<ItemEntity> entities = dao.query(request.getQuery());
-                    future.complete(Optional.of(entities));
+                    future.complete(Optional.of(dao.query(request.getQuery())));
                 }
                 case DELETE -> {
                     if (request.getDelete() == null)

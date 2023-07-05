@@ -12,6 +12,7 @@ import org.team5183.beeapi.runnables.NamedRunnable;
 import org.team5183.beeapi.threading.ThreadingManager;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
@@ -94,6 +95,10 @@ public class Main {
 
             // Print credentials to console.
             logger.warn("New account\nUsername: admin\nPassword: " + password + "\n--------------------\n\n");
+            if (init.canWrite()) {
+                new FileWriter("INITIALIZED").write("!! IF YOU DELETE THIS IT WILL RECREATE THE admin USER !!\nWHICH MAY CAUSE ERRORS WITH DATABASE UNIQUE CONSTRAINTS.\nDELETE THE DATABASE OR ENSURE THAT THE admin USER WITH EMAIL admin@example.com DOES NOT EXIST BEFORE DELETING");
+                init.setReadOnly();
+            }
         }
     }
 }
