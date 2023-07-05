@@ -79,6 +79,7 @@ public class ItemEntity implements Entity {
      */
     public ItemEntity() {
         this.checkouts = "";
+        if (this.checkoutEntities == null) this.checkoutEntities = new HashMap<>();
     }
 
 
@@ -371,7 +372,7 @@ public class ItemEntity implements Entity {
      * @return The checkout entities of the item
      */
     public synchronized HashMap<Long, CheckoutEntity> getCheckoutEntities() {
-        if (checkoutEntities == null) checkoutEntities = new HashMap<>();
+//        if (checkoutEntities == null) checkoutEntities = new HashMap<>();
         return checkoutEntities;
     }
 
