@@ -7,28 +7,8 @@ import java.io.*;
 
 public class ConfigurationParser {
     private static Configuration config;
-
-    public static class Configuration {
-        public String jwtSecret;
-
-        public String databaseUrl;
-        public int databaseMaxConnections;
-
-        public String ip;
-        public int port;
-
-        public int maxThreads;
-        public int maxEndAttempts;
-        public int maxOneshotEndAttempts;
-
-        public boolean forceLimit;
-        public int maxLimit;
-    }
-
-    public static class ConfigurationParseError extends Error {
-        public ConfigurationParseError(String message) {
-            super(message);
-        }
+    public static Configuration getConfiguration() {
+        return config;
     }
 
     public static @Nullable Configuration parseConfiguration(String path) throws FileNotFoundException, IOException, ConfigurationParseError {
@@ -62,7 +42,7 @@ public class ConfigurationParser {
         return null;
     }
 
-    public static boolean verifyConfiguration(Configuration config) throws ConfigurationParseError {
+    private static boolean verifyConfiguration(Configuration config) throws ConfigurationParseError {
         if (config.jwtSecret == null || config.jwtSecret.isEmpty()) {
             throw new ConfigurationParseError("JWT secret is not set. This is required and can anything you would like, however it is used to secure user JWT tokens so it should be fairly secure, losing this will not cause any major issues, just invalidate all user tokens.");
         }
@@ -99,10 +79,67 @@ public class ConfigurationParser {
             throw new ConfigurationParseError("Max limit is not valid.");
         }
 
+        if (config.useSSL && (config.keyStoreFile.isEmpty() || config.keyStoreFile.isBlank())) {
+            throw new ConfigurationParseError("Key store file is not set.");
+        }
+
+        if (config.useSSL && (config.keyStorePassword.isEmpty() || config.keyStorePassword.isBlank())) {
+            throw new ConfigurationParseError("Key store password is not set.");
+        }
+
+        if (config.useSSL && (config.trustStoreFile.isEmpty() || config.trustStoreFile.isBlank())) {
+            throw new ConfigurationParseError("Trust store file is not set.");
+        }
+
+        if (config.useSSL && (config.trustStorePassword.isEmpty() || config.trustStorePassword.isBlank())) {
+            throw new ConfigurationParseError("Trust store password is not set.");
+        }
+
         return true;
     }
 
-    public static Configuration getConfiguration() {
-        return config;
+    public static class ConfigurationParseError extends Error {
+        public ConfigurationParseError(String message) {
+            super(message);
+        }
     }
+
+    public static class Configuration {
+
+        public String jwtSecret;
+
+        public String databaseUrl;
+        public int databaseMaxConnections;
+
+        public String ip;
+        public int port;
+
+        public int maxThreads;
+        public int maxEndAttempts;
+        public int maxOneshotEndAttempts;
+
+        public boolean forceLimit;
+        public int maxLimit;
+
+        public boolean useSSL;
+        public String keyStoreFile;
+        public String keyStorePassword;
+        public String trustStoreFile;
+        public String trustStorePassword;
+    }
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -17,8 +17,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.security.SecureRandom;
 
-import static spark.Spark.ipAddress;
-import static spark.Spark.port;
+import static spark.Spark.*;
 
 public class Main {
     private static final Logger logger = LogManager.getLogger(Main.class);
@@ -72,7 +71,7 @@ public class Main {
         if (cmd.hasOption("help")) {
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("java -jar beeapi.jar [arguments]", "", options, "Made with ❤️ by Team 5183. https://github.com/frc5183", false);
-            System.exit(1);
+            System.exit(0);
         }
 
         // Parse configuration
@@ -82,6 +81,9 @@ public class Main {
         // Set port and IP address (environment variables IP & PORT)
         ipAddress(ConfigurationParser.getConfiguration().ip);
         port(ConfigurationParser.getConfiguration().port);
+
+        if (ConfigurationParser.getConfiguration().useSSL)
+            secure(ConfigurationParser.getConfiguration().keyStoreFile, ConfigurationParser.getConfiguration().keyStorePassword, ConfigurationParser.getConfiguration().trustStoreFile, ConfigurationParser.getConfiguration().trustStorePassword);
 
         Thread tm = new Thread(new ThreadingManager());
         tm.setName("Threading Manager");
@@ -117,7 +119,7 @@ public class Main {
         if (init.createNewFile() && cmd.hasOption("no-generate")) {
             logger.warn("Not generating a new administrator user.");
         }
-        if (init.createNewFile() && !cmd.hasOption("no-generate")) {
+        if (init.exists() && !cmd.hasOption("no-generate")) {
             logger.warn("\n\n--------------------\nFirst run detected, creating a new admin user.");
 
             String username = cmd.getOptionValue("user", "admin");

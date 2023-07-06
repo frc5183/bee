@@ -44,7 +44,7 @@ public class UserEndpoint extends Endpoint {
 
                 patch("/overwritePassword", this::changeSelfPassword);
 
-                patch("/update", this::updateSelf);
+                patch("", this::updateSelf);
             });
 
             path("/me", () -> {
@@ -281,15 +281,15 @@ public class UserEndpoint extends Endpoint {
     }
 
     private String updateSelf(Request req, Response res) {
-        JsonObject update = jsonFromBody(req);
+        UserEntity newUser = this.objectFromBody(req, UserEntity.class);
 
-        boolean loginExists = update.has("login") && !(update.get("login").getAsString().isEmpty() || update.get("login").getAsString().isBlank());
-        boolean emailExists = update.has("email") && !(update.get("email").getAsString().isEmpty() || update.get("email").getAsString().isBlank());
-        boolean displayNameExists = update.has("displayName") && !(update.get("displayName").getAsString().isEmpty() || update.get("displayName").getAsString().isBlank());
+        UserEntity user = getUserByToken(req, res);
 
-        if (!loginExists && !emailExists && !displayNameExists) end(400, ResponseStatus.ERROR, "Missing one or more: login, email, displayName");
+        if (newUser.getLogin() != null) user.setLogin(newUser.getLogin());
+        if (newUser.getEmail() != null) user.setEmail(newUser.getEmail());
+        if (newUser.getDisplayName() != null) user.setDisplayName(newUser.getDisplayName());
 
-        if (!update.get("email").getAsString().matches("^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$")) end(400, ResponseStatus.ERROR, "Invalid Email");
+        if (!user.isValid()) end(400, ResponseStatus.ERROR, "Invalid user data.");
 
         UserEntity user = getUserByToken(req, res);
 

@@ -13,5 +13,11 @@
 
   "forceLimit": true,
   "maxLimit": 1000,
-  "minLimit": 1
+  "minLimit": 1,
+
+  "useSSL": false,
+  "keyStoreFile": "",
+  "keyStorePassword": "",
+  "trustStoreFile": "",
+  "trustStorePassword": ""
 }

@@ -458,7 +458,7 @@ public class UserEntity {
      */
     public boolean isValid() {
         return this.login != null && !this.login.isEmpty() &&
-                this.email != null && this.email.isEmpty() &&
+                this.email != null && this.email.isEmpty() && this.email.matches("^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$") &&
                 this.displayName != null && !this.displayName.isEmpty() &&
                 this.role != null;
     }
