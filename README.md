@@ -17,4 +17,4 @@ Click the most recent workflow run and download BeeAPI.jar found in the artifact
 - [X] MULTITHREADING: Allow new types of custom runnables (e.g. ONESHOT, REPEATED, etc. and only stop ones that are REPEATED and force stop ONESHOT when it takes to long).\
 - [X] MULTITHREADING: Instead of trying all kind of PreparedStmt, we only do PreparedQuery and for update and insert we just take the Entity? 
 - [X] Verify if an entity is actually valid.
-- [ ] Add a config file instead of ENV vars.
+- [X] Add a config file instead of ENV vars.
