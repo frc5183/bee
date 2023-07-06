@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.util.ArrayUtils;
 
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 
 public class HashPassword {
     private static final Logger logger = LogManager.getLogger(HashPassword.class);
@@ -19,10 +20,7 @@ public class HashPassword {
      */
     public static byte[][] generateSaltedHashedPassword(String password) {
         byte[] salt = new byte[16];
-
-        for (int i = 0; i < 16; i++) {
-            salt[i] = (byte) (Math.random() * 256);
-        }
+        new SecureRandom().nextBytes(salt);
 
         byte[] hash = generateHashedPassword(password, salt);
 

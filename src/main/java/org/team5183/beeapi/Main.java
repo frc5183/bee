@@ -1,49 +1,161 @@
 package org.team5183.beeapi;
 
-import com.google.gson.Gson;
+import org.apache.commons.cli.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.team5183.beeapi.constants.Role;
 import org.team5183.beeapi.endpoints.ItemEndpoint;
-import org.team5183.beeapi.endpoints.MiscEndpoints;
+import org.team5183.beeapi.endpoints.MiscEndpoint;
 import org.team5183.beeapi.endpoints.UserEndpoint;
-import org.team5183.beeapi.entities.CheckoutEntity;
-import org.team5183.beeapi.entities.ItemEntity;
-import org.team5183.beeapi.response.BasicResponse;
-import org.team5183.beeapi.response.ResponseStatus;
-import org.team5183.beeapi.util.Database;
+import org.team5183.beeapi.entities.UserEntity;
+import org.team5183.beeapi.runnables.DatabaseRunnable;
+import org.team5183.beeapi.threading.ThreadingManager;
+import spark.Spark;
 
-import java.sql.SQLException;
-import java.time.Instant;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.security.SecureRandom;
 
 import static spark.Spark.*;
 
 public class Main {
-    public static final Logger logger = LogManager.getLogger(Main.class);
+    private static final Logger logger = LogManager.getLogger(Main.class);
 
-    public static void main(String[] args) throws SQLException {
-        if (System.getenv("JWT_SECRET") == null || System.getenv("JWT_SECRET").isEmpty() || System.getenv("JWT_SECRET").isBlank()) {
-            logger.fatal("You must set JWT_SECRET environment variable for signing JWT tokens. This can be any random string however should be treated as a password (as in long and secure). If you lose this, all users will be logged out and will have to re-login.");
+    public static void main(String[] args) throws IOException, InterruptedException {
+        // Parse command line options.
+        Options options = null;
+        CommandLine cmd = null;
+        try {
+            options = new Options();
+
+            Option configFile = new Option("c", "config", true, "Configuration file path.");
+            configFile.setRequired(false);
+
+            Option generateUser = new Option("g", "no-generate", false, "Do not generate a new administrator user on first run.");
+            generateUser.setRequired(false);
+
+            Option defaultUser = new Option("u", "username", true, "Default username for the administrator user.");
+            defaultUser.setRequired(false);
+            Option defaultPassword = new Option("p", "password", true, "Default password for the administrator user.");
+            defaultPassword.setRequired(false);
+            Option defaultEmail = new Option("e", "email", true, "Default email for the administrator user.");
+            defaultEmail.setRequired(false);
+            Option defaultDisplayName = new Option("d", "display-name", true, "Default display name for the administrator user.");
+            defaultDisplayName.setRequired(false);
+
+            Option help = new Option("h", "help", false, "Show this page.");
+            defaultDisplayName.setRequired(false);
+
+            options.addOption(configFile);
+
+            OptionGroup user = new OptionGroup();
+            user.addOption(generateUser);
+            user.addOption(defaultUser);
+            user.addOption(defaultPassword);
+            user.addOption(defaultEmail);
+            user.addOption(defaultDisplayName);
+            options.addOptionGroup(user);
+
+            options.addOption(help);
+
+            CommandLineParser parser = new DefaultParser();
+            cmd = parser.parse(options, args);
+
+        } catch (ParseException e) {
+            HelpFormatter formatter = new HelpFormatter();
+            formatter.printHelp("java -jar beeapi.jar [arguments]", "", options, "Made with ❤️ by Team 5183. https://github.com/frc5183", false);
             System.exit(1);
         }
 
-        ipAddress(System.getenv("IP") != null ? System.getenv("IP") : "localhost");
-        port(System.getenv("PORT") != null ? Integer.parseInt(System.getenv("PORT")) : 5050);
+        if (cmd.hasOption("help")) {
+            HelpFormatter formatter = new HelpFormatter();
+            formatter.printHelp("java -jar beeapi.jar [arguments]", "", options, "Made with ❤️ by Team 5183. https://github.com/frc5183", false);
+            System.exit(0);
+        }
+
+        // Parse configuration
+        ConfigurationParser.parseConfiguration(cmd.getOptionValue("config", "config.json"));
 
 
-        before("/*", (request, response) -> {
-            response.type("application/json");
-            logger.info("Received " + request.requestMethod() + " request from " + request.ip() + " for " + request.url());
-        });
+        // Set port and IP address (environment variables IP & PORT)
+        ipAddress(ConfigurationParser.getConfiguration().ip);
+        port(ConfigurationParser.getConfiguration().port);
 
-        notFound((req, res) -> {
-            res.status(404);
-            return new Gson().toJson(new BasicResponse(ResponseStatus.ERROR, "Not Found"));
-        });
+        if (ConfigurationParser.getConfiguration().useSSL)
+            secure(ConfigurationParser.getConfiguration().keyStoreFile, ConfigurationParser.getConfiguration().keyStorePassword, ConfigurationParser.getConfiguration().trustStoreFile, ConfigurationParser.getConfiguration().trustStorePassword);
 
-        new ItemEndpoint();
-        new UserEndpoint();
-        new MiscEndpoints();
+        Thread tm = new Thread(new ThreadingManager());
+        tm.setName("Threading Manager");
+        tm.start();
 
-        Database.init();
+        // Add threading tasks
+        ThreadingManager.addTask(new DatabaseRunnable());
+
+        while (DatabaseRunnable.getReady().isDone()) {
+            Thread.sleep(1);
+        }
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            logger.info("Shutting down...");
+            ThreadingManager.shutdown();
+
+            logger.info("Stopping Spark...");
+            Spark.stop();
+
+            logger.info("Shutdown complete.");
+            System.exit(0);
+        }));
+
+
+        // Register endpoints
+        new ItemEndpoint().registerEndpoints();
+        new UserEndpoint().registerEndpoints();
+        new MiscEndpoint().registerEndpoints();
+
+        // First run checks
+        File init = new File("INITIALIZED");
+
+        if (init.createNewFile() && cmd.hasOption("no-generate")) {
+            logger.warn("Not generating a new administrator user.");
+        }
+        if (init.exists() && !cmd.hasOption("no-generate")) {
+            logger.warn("\n\n--------------------\nFirst run detected, creating a new admin user.");
+
+            String username = cmd.getOptionValue("user", "admin");
+            String password = cmd.getOptionValue("password", null);
+
+            if (password == null) {
+                // Generate a random password.
+                int leftLimit = 40; // (
+                int rightLimit = 126; // ~
+                SecureRandom random = new SecureRandom();
+                StringBuilder buffer = new StringBuilder(14);
+                for (int i = 0; i < 14; i++) {
+                    int randomLimitedInt = leftLimit + (int)
+                            (random.nextFloat() * (rightLimit - leftLimit + 1));
+                    buffer.append((char) randomLimitedInt);
+                }
+                password = buffer.toString();
+            }
+
+            String email = cmd.getOptionValue("email", "admin@example.com");
+            String displayName = cmd.getOptionValue("display-name", "Administrator");
+
+            try {
+                // Create a new admin user.
+                new UserEntity(username, password, email, displayName, Role.ADMIN).create();
+            } catch (Exception e) {
+                logger.fatal("Failed to create admin user, exiting.");
+                init.delete();
+                System.exit(1);
+            }
+
+            // Print credentials to console.
+            logger.warn("New account\nUsername: admin\nPassword: " + password + "\n--------------------\n\n");
+            if (init.canWrite()) {
+                new FileWriter("INITIALIZED").write("!! IF YOU DELETE THIS IT WILL RECREATE A DEFAULT USER !!\nWHICH MAY CAUSE ERRORS WITH DATABASE UNIQUE CONSTRAINTS.\nBefore deleting the database ensure you do one of the following.\n1. Delete the database.\n2. Delete the user.\n3. First run after you delete this file, use the -g parameter to recreate it without creating a new user.\n4. Use the parameters to create another user with a different username and email to avoid constraint issues.");
+            }
+        }
     }
 }
