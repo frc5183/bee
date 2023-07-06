@@ -5,7 +5,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.team5183.beeapi.authentication.HashPassword;
 import org.team5183.beeapi.authentication.JWTManager;
-import org.team5183.beeapi.constants.Permission;
 import org.team5183.beeapi.constants.Role;
 import org.team5183.beeapi.entities.UserEntity;
 import org.team5183.beeapi.middleware.Authentication;
@@ -282,54 +281,21 @@ public class UserEndpoint extends Endpoint {
 
     private String updateSelf(Request req, Response res) {
         UserEntity newUser = this.objectFromBody(req, UserEntity.class);
-
         UserEntity user = getUserByToken(req, res);
 
         if (newUser.getLogin() != null) user.setLogin(newUser.getLogin());
         if (newUser.getEmail() != null) user.setEmail(newUser.getEmail());
         if (newUser.getDisplayName() != null) user.setDisplayName(newUser.getDisplayName());
+        if (newUser.getRole() != null && user.getRole() == Role.ADMIN) {
+            this.checkPermission(req, res, Role.ADMIN);
+            user.setRole(newUser.getRole());
+        }
+        if (newUser.getPermissions() != null) {
+            this.checkPermission(req, res, Role.ADMIN);
+            user.setPermissions(user.getPermissions());
+        }
 
         if (!user.isValid()) end(400, ResponseStatus.ERROR, "Invalid user data.");
-
-        UserEntity user = getUserByToken(req, res);
-
-        if (loginExists) {
-            if (getUserByLogin(req, res) != null) end(400, ResponseStatus.ERROR, "Login already taken");
-
-            user.setLogin(update.get("login").getAsString());
-        }
-
-        if (emailExists) {
-            if (getUserByEmail(req, res) != null) end(400, ResponseStatus.ERROR, "Email already taken");
-
-            user.setEmail(update.get("email").getAsString());
-        }
-
-        if (displayNameExists) user.setDisplayName(update.get("displayName").getAsString());
-
-        // admin stuff
-        boolean roleExists = update.has("role") && !(update.get("role").getAsString().isEmpty() || update.get("role").getAsString().isBlank());
-        boolean permissionsExists = update.has("permissions") && !(update.get("permissions").getAsString().isEmpty() || update.get("permissions").getAsString().isBlank());
-
-        if (roleExists || permissionsExists) {
-            this.checkPermission(req, res, Role.ADMIN);
-        }
-
-        if (roleExists) {
-            try {
-                user.setRole(Role.valueOf(update.get("role").getAsString()));
-            } catch (IllegalArgumentException e) {
-                end(400, ResponseStatus.ERROR, "Invalid Role");
-            }
-        }
-
-        if (permissionsExists) {
-            try {
-                update.get("permissions").getAsJsonArray().forEach(jsonElement -> user.addPermission(Permission.valueOf(jsonElement.getAsString())));
-            } catch (IllegalArgumentException | IllegalStateException e) {
-                end(400, ResponseStatus.ERROR, "Invalid Permissions");
-            }
-        }
 
         try {
             user.update();
