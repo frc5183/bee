@@ -43,7 +43,7 @@ public class UserEndpoint extends Endpoint {
 
                 patch("/overwritePassword", this::changeSelfPassword);
 
-                patch("", this::updateSelf);
+                patch("", this::updateUser);
             });
 
             path("/me", () -> {
@@ -53,7 +53,7 @@ public class UserEndpoint extends Endpoint {
 
                 patch("/changePassword", this::changeSelfPassword);
 
-                patch("/update", this::updateSelf);
+                patch("/update", this::updateUser);
 
 //                delete("", this::deleteSelf);
             });
@@ -62,6 +62,19 @@ public class UserEndpoint extends Endpoint {
 
             post("/logout", this::logoutSelf);
         });
+    }
+
+    private UserEntity getUserByToken(Request request, Response response) {
+        String token = getToken(request);
+
+        UserEntity user = null;
+        try {
+            user = UserEntity.getUserEntityByToken(token);
+        } catch (Exception e) {
+            end(500, ResponseStatus.ERROR, "Internal Server Error");
+        }
+
+        return user;
     }
 
     private UserEntity getUserByLogin(Request req, Response res) {
@@ -279,9 +292,19 @@ public class UserEndpoint extends Endpoint {
         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Password Changed Successfully"));
     }
 
-    private String updateSelf(Request req, Response res) {
+    private String updateUser(Request req, Response res) {
         UserEntity newUser = this.objectFromBody(req, UserEntity.class);
-        UserEntity user = getUserByToken(req, res);
+
+        UserEntity user;
+        if (req.params(":id") != null) {
+            try {
+                user = UserEntity.getUserEntity(Long.parseLong(req.params(":id")));
+            } catch (SQLException e) {
+                e.printStackTrace();
+                end(500, ResponseStatus.ERROR, "Internal Server Error");
+            }
+        }
+        user = getUserByToken(req, res);
 
         if (newUser.getLogin() != null) user.setLogin(newUser.getLogin());
         if (newUser.getEmail() != null) user.setEmail(newUser.getEmail());
