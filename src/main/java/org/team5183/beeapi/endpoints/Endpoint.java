@@ -4,7 +4,6 @@ import com.google.gson.*;
 import org.jetbrains.annotations.NotNull;
 import org.team5183.beeapi.constants.Permission;
 import org.team5183.beeapi.constants.Role;
-import org.team5183.beeapi.entities.UserEntity;
 import org.team5183.beeapi.middleware.Authentication;
 import org.team5183.beeapi.response.BasicResponse;
 import org.team5183.beeapi.response.ResponseStatus;
@@ -182,24 +181,5 @@ public abstract class Endpoint {
         }
 
         return request.headers("Authorization").replace("Bearer ", "");
-    }
-
-    @NotNull
-    UserEntity getUserByToken(Request request, Response response) {
-        String token = getToken(request);
-
-        authenticate(request, response);
-
-        UserEntity user = null;
-        try {
-            user = UserEntity.getUserEntityByToken(token);
-        } catch (Exception e) {
-            end(500, ResponseStatus.ERROR, "Internal Server Error");
-        }
-
-        if (user == null) end(500, ResponseStatus.ERROR, "Internal Server Error");
-        assert user != null;
-
-        return user;
     }
 }
