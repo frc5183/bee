@@ -1,0 +1,17 @@
+{
+  "jwtSecret": "",
+
+  "databaseUrl": "jdbc:sqlite:beeapi.db",
+  "databaseMaxConnections": 10,
+
+  "ip": "0.0.0.0",
+  "port": 5050,
+
+  "maxThreads": 20,
+  "maxEndAttempts": 5,
+  "maxOneshotEndAttempts": 20,
+
+  "forceLimit": true,
+  "maxLimit": 1000,
+  "minLimit": 1
+}

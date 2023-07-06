@@ -14,9 +14,6 @@ import org.team5183.beeapi.threading.ThreadingManager;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
-import java.sql.SQLException;
 import java.util.Random;
 
 import static spark.Spark.ipAddress;
@@ -25,12 +22,13 @@ import static spark.Spark.port;
 public class Main {
     private static final Logger logger = LogManager.getLogger(Main.class);
 
-    public static void main(String[] args) throws SQLException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, InterruptedException {
+    public static void main(String[] args) throws IOException {
         // Check if JWT_SECRET is set, we need this, and it's not something we should randomly generate.
-        if (System.getenv("JWT_SECRET") == null || System.getenv("JWT_SECRET").isEmpty() || System.getenv("JWT_SECRET").isBlank()) {
-            logger.fatal("You must set JWT_SECRET environment variable for signing JWT tokens. This can be any random string however should be treated as a password (as in long and secure). \nIf you lose this it will just cause a minor inconvenience, all users tokens will be invalidated and they will have to log back in.");
-            System.exit(1);
-        }
+//        if (System.getenv("JWT_SECRET") == null || System.getenv("JWT_SECRET").isEmpty() || System.getenv("JWT_SECRET").isBlank()) {
+//            logger.fatal("You must set JWT_SECRET environment variable for signing JWT tokens. This can be any random string however should be treated as a password (as in long and secure). \nIf you lose this it will just cause a minor inconvenience, all users tokens will be invalidated and they will have to log back in.");
+//            System.exit(1);
+//        }
+        ConfigurationParser.parseConfiguration("config.json");
 
         // Set port and IP address (environment variables IP & PORT)
         ipAddress(System.getenv("IP") != null ? System.getenv("IP") : "localhost");
@@ -42,6 +40,7 @@ public class Main {
 
         // Add threading tasks
         ThreadingManager.addTask(new DatabaseRunnable());
+
 
         while (DatabaseRunnable.getReady().isDone()) {}
 

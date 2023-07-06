@@ -2,6 +2,7 @@ package org.team5183.beeapi.threading;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.team5183.beeapi.ConfigurationParser;
 import org.team5183.beeapi.runnables.NamedRunnable;
 import org.team5183.beeapi.runnables.NamedRunnable.RunnableStatus;
 import org.team5183.beeapi.runnables.NamedRunnable.RunnableType;
@@ -21,9 +22,9 @@ public class ThreadingManager extends Thread {
     private static final ConcurrentHashMap<NamedRunnable, Integer> endAttempts = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<NamedRunnable, Long> lastDamagedMessage = new ConcurrentHashMap<>();
 
-    private static final int maxThreads = (System.getenv("maxThreads") == null || System.getenv("maxThreads").isEmpty() || System.getenv("maxThreads").isBlank()) ? 20 : Integer.parseInt(System.getenv("maxThreads"));
-    private static final int maxEndAttempts = (System.getenv("maxEndAttempts") == null || System.getenv("maxEndAttempts").isEmpty() || System.getenv("maxEndAttempts").isBlank()) ? 5 : Integer.parseInt(System.getenv("maxEndAttempts"));
-    private static final int maxOneshotEndAttempts = (System.getenv("maxOneshotEndAttempts") == null || System.getenv("maxOneshotEndAttempts").isEmpty() || System.getenv("maxOneshotEndAttempts").isBlank()) ? 20 : Integer.parseInt(System.getenv("maxOneshotEndAttempts"));
+    private static final int maxThreads = ConfigurationParser.getConfiguration().maxThreads;
+    private static final int maxEndAttempts = ConfigurationParser.getConfiguration().maxEndAttempts;
+    private static final int maxOneshotEndAttempts = ConfigurationParser.getConfiguration().maxOneshotEndAttempts;
 
     private static RunnableStatus status;
 

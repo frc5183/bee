@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.util.Callback;
 import org.jetbrains.annotations.NotNull;
+import org.team5183.beeapi.ConfigurationParser;
 import org.team5183.beeapi.entities.ItemEntity;
 import org.team5183.beeapi.entities.UserEntity;
 import org.team5183.beeapi.threading.ThreadingManager;
@@ -48,8 +49,8 @@ public class DatabaseRunnable extends RepeatedRunnable {
         JdbcPooledConnectionSource connectionSource = null;
         try {
             // Initialize connection source.
-            connectionSource = new JdbcPooledConnectionSource(System.getenv("DATABASE_URL") == null ? "jdbc:sqlite:beeapi.db" : System.getenv("DATABASE_URL"));
-            connectionSource.setMaxConnectionsFree(System.getenv("DATABASE_MAX_CONNECTIONS") == null ? 10 : Integer.parseInt(System.getenv("DATABASE_MAX_CONNECTIONS")));
+            connectionSource = new JdbcPooledConnectionSource(ConfigurationParser.getConfiguration().databaseUrl);
+            connectionSource.setMaxConnectionsFree(ConfigurationParser.getConfiguration().databaseMaxConnections);
 
             // Create tables if not exists.
             TableUtils.createTableIfNotExists(connectionSource, ItemEntity.class);

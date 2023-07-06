@@ -11,6 +11,10 @@ repositories {
 
 }
 
+build {
+    dependsOn(shadowJar)
+}
+
 jar {
     manifest {
         attributes 'Main-Class': 'org.team5183.beeapi.Main'
