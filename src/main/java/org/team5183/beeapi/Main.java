@@ -116,10 +116,10 @@ public class Main {
         // First run checks
         File init = new File("INITIALIZED");
 
-        if (init.createNewFile() && cmd.hasOption("no-generate")) {
+        if (init.exists() || cmd.hasOption("no-generate")) {
             logger.warn("Not generating a new administrator user.");
         }
-        if (init.exists() && !cmd.hasOption("no-generate")) {
+        if (init.createNewFile() && !cmd.hasOption("no-generate")) {
             logger.warn("\n\n--------------------\nFirst run detected, creating a new admin user.");
 
             String username = cmd.getOptionValue("user", "admin");
