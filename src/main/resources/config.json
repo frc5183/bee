@@ -14,7 +14,8 @@
   "forceLimit": true,
   "maxLimit": 1000,
   "minLimit": 1,
-
+  "threadTime": 100,
+  "threadSaver": false,
   "useSSL": false,
   "keyStoreFile": "",
   "keyStorePassword": "",

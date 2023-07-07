@@ -24,6 +24,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import static java.lang.Thread.sleep;
+
 // todo: make this better (im sure it doesnt even work right but i haven't really tested)
 public class DatabaseRunnable extends RepeatedRunnable {
     private static final Logger logger = LogManager.getLogger(DatabaseRunnable.class);
@@ -40,7 +42,8 @@ public class DatabaseRunnable extends RepeatedRunnable {
 
     private static final ConcurrentHashMap<DatabaseRequest<ItemEntity>, CompletableFuture<Optional<List<ItemEntity>>>> itemFutures = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<DatabaseRequest<UserEntity>, CompletableFuture<Optional<List<UserEntity>>>> userFutures = new ConcurrentHashMap<>();
-
+    private static final boolean threadSaver = ConfigurationParser.getConfiguration().threadSaver;
+    private static final int threadTime = ConfigurationParser.getConfiguration().threadTime;
 
 
     @Override
@@ -69,6 +72,13 @@ public class DatabaseRunnable extends RepeatedRunnable {
         // Begin loop.
         while (this.status != RunnableStatus.ENDED && this.status != RunnableStatus.ENDING) {
             drainQueues();
+            if (threadSaver) {
+                try {
+                    sleep(threadTime);
+                } catch (InterruptedException e) {
+
+                }
+            }
         }
 
         drainQueues();

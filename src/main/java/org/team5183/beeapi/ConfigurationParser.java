@@ -11,7 +11,7 @@ public class ConfigurationParser {
         return config;
     }
 
-    public static @Nullable Configuration parseConfiguration(String path) throws FileNotFoundException, IOException, ConfigurationParseError {
+    public static @Nullable Configuration parseConfiguration(String path) throws IOException, ConfigurationParseError {
         File configFile = new File(path);
         if (!configFile.exists()) {
             InputStream defaultConfig = ConfigurationParser.class.getClassLoader().getResourceAsStream("config.json");
@@ -74,6 +74,9 @@ public class ConfigurationParser {
         if (config.maxOneshotEndAttempts <= 0) {
             throw new ConfigurationParseError("Max oneshot end attempts is not valid.");
         }
+        if (config.threadSaver && config.threadTime<=0) {
+            throw new ConfigurationParseError("Thread saver time is not valid.");
+        }
 
         if (config.forceLimit && config.maxLimit <= 0) {
             throw new ConfigurationParseError("Max limit is not valid.");
@@ -120,7 +123,8 @@ public class ConfigurationParser {
 
         public boolean forceLimit;
         public int maxLimit;
-
+        public int threadTime;
+        public boolean threadSaver;
         public boolean useSSL;
         public String keyStoreFile;
         public String keyStorePassword;

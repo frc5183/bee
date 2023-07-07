@@ -25,7 +25,8 @@ public class ThreadingManager extends Thread {
     private static final int maxThreads = ConfigurationParser.getConfiguration().maxThreads;
     private static final int maxEndAttempts = ConfigurationParser.getConfiguration().maxEndAttempts;
     private static final int maxOneshotEndAttempts = ConfigurationParser.getConfiguration().maxOneshotEndAttempts;
-
+    private static final boolean threadSaver = ConfigurationParser.getConfiguration().threadSaver;
+    private static final int threadTime = ConfigurationParser.getConfiguration().threadTime;
     private static RunnableStatus status;
 
     @Override
@@ -81,6 +82,13 @@ public class ThreadingManager extends Thread {
                     lastDamagedMessage.put(runnable, System.currentTimeMillis());
                 }
                 if (runnable.getStatus() != RunnableStatus.DAMAGED) lastDamagedMessage.remove(runnable);
+            }
+            if (threadSaver) {
+                try {
+                    sleep(threadTime);
+                } catch (InterruptedException e) {
+
+                }
             }
         }
 
