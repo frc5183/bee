@@ -28,7 +28,7 @@ public class JWTManager {
      * @throws IncorrectClaimException If the token contains an incorrect claim.
      */
     public static DecodedJWT decodeToken(String signedToken) throws AlgorithmMismatchException, SignatureVerificationException, TokenExpiredException, IncorrectClaimException {
-        Algorithm algorithm = Algorithm.HMAC384(System.getenv("JWT_SECRET"));
+        Algorithm algorithm = Algorithm.HMAC384(ConfigurationParser.getConfiguration().jwtSecret);
         return JWT.require(algorithm).build().verify(signedToken);
     }
 }
