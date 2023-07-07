@@ -4,7 +4,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.*;
 import com.auth0.jwt.interfaces.DecodedJWT;
-
+import org.team5183.beeapi.ConfigurationParser;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
@@ -14,7 +14,7 @@ public class JWTManager {
      * @return A signed JWT token.
      */
     public static String generateToken() {
-        Algorithm algorithm = Algorithm.HMAC384(System.getenv("JWT_SECRET"));
+        Algorithm algorithm = Algorithm.HMAC384(ConfigurationParser.getConfiguration().jwtSecret);
         return JWT.create().withExpiresAt(Instant.now().plus(30, ChronoUnit.DAYS)).sign(algorithm);
     }
 
