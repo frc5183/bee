@@ -293,6 +293,8 @@ public class UserEndpoint extends Endpoint {
     }
 
     private String updateUser(Request req, Response res) {
+        if (req.params(":id") != null && !req.params(":id").equals("me")) return null;
+
         UserEntity newUser = this.objectFromBody(req, UserEntity.class);
 
         UserEntity user;

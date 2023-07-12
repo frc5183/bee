@@ -1,7 +1,6 @@
 package org.team5183.beeapi;
 
 import com.google.gson.Gson;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 
@@ -11,7 +10,7 @@ public class ConfigurationParser {
         return config;
     }
 
-    public static @Nullable Configuration parseConfiguration(String path) throws IOException, ConfigurationParseError {
+    public static boolean parseConfiguration(String path) throws FileNotFoundException, IOException, ConfigurationParseError {
         File configFile = new File(path);
         if (!configFile.exists()) {
             InputStream defaultConfig = ConfigurationParser.class.getClassLoader().getResourceAsStream("config.json");
@@ -36,10 +35,10 @@ public class ConfigurationParser {
         config = new Gson().fromJson(builder.toString(), Configuration.class);
 
         if (verifyConfiguration(config)) {
-            return config;
+            return false;
         }
 
-        return null;
+        return true;
     }
 
     private static boolean verifyConfiguration(Configuration config) throws ConfigurationParseError {
@@ -74,8 +73,9 @@ public class ConfigurationParser {
         if (config.maxOneshotEndAttempts <= 0) {
             throw new ConfigurationParseError("Max oneshot end attempts is not valid.");
         }
-        if (config.threadSaver && config.threadTime<=0) {
-            throw new ConfigurationParseError("Thread saver time is not valid.");
+
+        if (config.threadDelay <= 0) {
+            throw new ConfigurationParseError("Thread delay is not valid.");
         }
 
         if (config.forceLimit && config.maxLimit <= 0) {
@@ -117,14 +117,14 @@ public class ConfigurationParser {
         public String ip;
         public int port;
 
+        public long threadDelay;
         public int maxThreads;
         public int maxEndAttempts;
         public int maxOneshotEndAttempts;
 
         public boolean forceLimit;
         public int maxLimit;
-        public int threadTime;
-        public boolean threadSaver;
+
         public boolean useSSL;
         public String keyStoreFile;
         public String keyStorePassword;

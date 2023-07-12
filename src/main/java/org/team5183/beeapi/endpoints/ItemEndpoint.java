@@ -22,19 +22,15 @@ public class ItemEndpoint extends Endpoint {
 
     @Override
     public void registerEndpoints() {
+
         path("/items" , () -> {
-            before("*", this::authenticate);
-            get("/all", this::getAllItems);
-            post("/new", "application/json", this::newItem);
+            before("", this::authenticate);
 
             path("/:id", () -> {
                 before("", this::isItemExist);
-
                 get("", this::endpointGetItem);
-
                 delete("", this::deleteItem);
-
-                patch("", "application/json", this::updateItem);
+                patch("", this::updateItem);
 
                 path("/checkout", () -> {
                     post("", this::checkoutItem);
@@ -52,6 +48,12 @@ public class ItemEndpoint extends Endpoint {
 
                 patch("/return", this::returnItem);
             });
+        });
+
+        path("/items" , () -> {
+            before("", this::authenticate);
+            get("/all", this::getAllItems);
+            post("/new", this::newItem);
         });
     }
 

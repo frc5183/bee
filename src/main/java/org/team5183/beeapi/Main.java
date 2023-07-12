@@ -77,7 +77,6 @@ public class Main {
         // Parse configuration
         ConfigurationParser.parseConfiguration(cmd.getOptionValue("config", "config.json"));
 
-
         // Set port and IP address (environment variables IP & PORT)
         ipAddress(ConfigurationParser.getConfiguration().ip);
         port(ConfigurationParser.getConfiguration().port);
@@ -117,6 +116,8 @@ public class Main {
         File init = new File("INITIALIZED");
 
         if (init.exists() || cmd.hasOption("no-generate")) {
+            if (init.canWrite())
+                new FileWriter("INITIALIZED").write("NOTE: This file was generated with the --no-generate flag, and did not generate a default admin user, therefore things here may or may not be true.\n!! IF YOU DELETE THIS IT WILL RECREATE A DEFAULT USER !!\nWHICH MAY CAUSE ERRORS WITH DATABASE UNIQUE CONSTRAINTS.\nBefore deleting the database ensure you do one of the following.\n1. Delete the database.\n2. Delete the user.\n3. First run after you delete this file, use the -g parameter to recreate it without creating a new user.\n4. Use the parameters to create another user with a different username and email to avoid constraint issues.");
             logger.warn("Not generating a new administrator user.");
         }
         if (init.createNewFile() && !cmd.hasOption("no-generate")) {
@@ -146,6 +147,7 @@ public class Main {
                 // Create a new admin user.
                 new UserEntity(username, password, email, displayName, Role.ADMIN).create();
             } catch (Exception e) {
+                e.printStackTrace();
                 logger.fatal("Failed to create admin user, exiting.");
                 init.delete();
                 System.exit(1);
@@ -153,9 +155,8 @@ public class Main {
 
             // Print credentials to console.
             logger.warn("New account\nUsername: admin\nPassword: " + password + "\n--------------------\n\n");
-            if (init.canWrite()) {
+            if (init.canWrite())
                 new FileWriter("INITIALIZED").write("!! IF YOU DELETE THIS IT WILL RECREATE A DEFAULT USER !!\nWHICH MAY CAUSE ERRORS WITH DATABASE UNIQUE CONSTRAINTS.\nBefore deleting the database ensure you do one of the following.\n1. Delete the database.\n2. Delete the user.\n3. First run after you delete this file, use the -g parameter to recreate it without creating a new user.\n4. Use the parameters to create another user with a different username and email to avoid constraint issues.");
-            }
         }
     }
 }

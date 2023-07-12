@@ -25,8 +25,7 @@ public class ThreadingManager extends Thread {
     private static final int maxThreads = ConfigurationParser.getConfiguration().maxThreads;
     private static final int maxEndAttempts = ConfigurationParser.getConfiguration().maxEndAttempts;
     private static final int maxOneshotEndAttempts = ConfigurationParser.getConfiguration().maxOneshotEndAttempts;
-    private static final boolean threadSaver = ConfigurationParser.getConfiguration().threadSaver;
-    private static final int threadTime = ConfigurationParser.getConfiguration().threadTime;
+
     private static RunnableStatus status;
 
     @Override
@@ -37,18 +36,24 @@ public class ThreadingManager extends Thread {
                 queue.drainTo(finalQueue);
                 finalQueue.forEach(this::startRunnable);
 
+                boolean oneshotDone = false;
                 for (NamedRunnable runnable : threads.keySet()) {
                     if (runnable.getType() == RunnableType.ONESHOT) {
                         endAttempts.putIfAbsent(runnable, 0);
                         if (endAttempts.get(runnable) >= maxOneshotEndAttempts) {
-                            logger.error("Oneshot thread " + runnable.getClass().getName() + " has failed to complete after " + maxEndAttempts + " attempts, forcibly ending.");
+                            logger.error("Oneshot thread " + runnable.getName() + " has failed to complete after " + maxOneshotEndAttempts + " attempts, forcibly ending.");
                             threads.get(runnable).interrupt();
                             threads.remove(runnable);
                         } else {
                             endAttempts.put(runnable, endAttempts.get(runnable) + 1);
                         }
+
+                        if (runnable.getStatus() == RunnableStatus.ENDED) threads.remove(runnable);
+                        oneshotDone = runnable.getStatus() == RunnableStatus.ENDED;
                     }
                 }
+
+                if (!oneshotDone) continue;
 
                 for (NamedRunnable runnable : threads.keySet()) {
                     if (runnable.getType() == RunnableType.REPEATED) {
@@ -56,7 +61,7 @@ public class ThreadingManager extends Thread {
                         if (rRunnable.getStatus() != RunnableStatus.ENDED) {
                             endAttempts.putIfAbsent(runnable, 0);
                             if (endAttempts.get(runnable) >= maxEndAttempts) {
-                                logger.error("Thread " + runnable.getClass().getName() + " has failed to end after " + maxEndAttempts + " attempts, forcibly ending.");
+                                logger.error("Thread " + runnable.getName() + " has failed to end after " + maxEndAttempts + " attempts, forcibly ending.");
                                 threads.get(runnable).interrupt();
                                 threads.remove(runnable);
                             }
@@ -68,26 +73,27 @@ public class ThreadingManager extends Thread {
                 }
 
                 if (threads.size() == 0) break;
-            }
-
-            if (queue.size() > 0) {
-                if (threads.size() >= maxThreads) continue;
-                startRunnable(queue.poll());
-            }
-
-            for (NamedRunnable runnable : threads.keySet()) {
-                if (runnable.getStatus() == RunnableStatus.ENDED) threads.remove(runnable);
-                if (runnable.getStatus() == RunnableStatus.DAMAGED && System.currentTimeMillis() - lastDamagedMessage.get(runnable) < 60000) {
-                    logger.warn("Thread " + runnable.getClass().getName() + " is marked as damaged.");
-                    lastDamagedMessage.put(runnable, System.currentTimeMillis());
+            } else {
+                if (queue.size() > 0) {
+                    if (threads.size() >= maxThreads) continue;
+                    startRunnable(queue.poll());
                 }
-                if (runnable.getStatus() != RunnableStatus.DAMAGED) lastDamagedMessage.remove(runnable);
-            }
-            if (threadSaver) {
-                try {
-                    sleep(threadTime);
-                } catch (InterruptedException e) {
 
+                for (NamedRunnable runnable : threads.keySet()) {
+                    if (runnable.getStatus() == RunnableStatus.ENDED) threads.remove(runnable);
+                    if (runnable.getStatus() == RunnableStatus.DAMAGED && System.currentTimeMillis() - lastDamagedMessage.get(runnable) < 60000) {
+                        logger.warn("Thread " + runnable.getClass().getName() + " is marked as damaged.");
+                        lastDamagedMessage.put(runnable, System.currentTimeMillis());
+                    }
+                    if (runnable.getStatus() != RunnableStatus.DAMAGED) lastDamagedMessage.remove(runnable);
+                }
+            }
+
+            if (ConfigurationParser.getConfiguration().threadDelay > 0) {
+                try {
+                    sleep(ConfigurationParser.getConfiguration().threadDelay);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
                 }
             }
         }

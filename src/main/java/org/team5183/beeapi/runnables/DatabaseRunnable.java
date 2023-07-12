@@ -24,13 +24,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static java.lang.Thread.sleep;
-
 // todo: make this better (im sure it doesnt even work right but i haven't really tested)
 public class DatabaseRunnable extends RepeatedRunnable {
     private static final Logger logger = LogManager.getLogger(DatabaseRunnable.class);
 
     private static final Callback.Completable ready = new Callback.Completable();
+
+    // Connection source
+    private static JdbcPooledConnectionSource connectionSource;
 
     // Item DAO for interacting with specific tables.
     private static Dao<ItemEntity, Long> itemDao;
@@ -42,14 +43,10 @@ public class DatabaseRunnable extends RepeatedRunnable {
 
     private static final ConcurrentHashMap<DatabaseRequest<ItemEntity>, CompletableFuture<Optional<List<ItemEntity>>>> itemFutures = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<DatabaseRequest<UserEntity>, CompletableFuture<Optional<List<UserEntity>>>> userFutures = new ConcurrentHashMap<>();
-    private static final boolean threadSaver = ConfigurationParser.getConfiguration().threadSaver;
-    private static final int threadTime = ConfigurationParser.getConfiguration().threadTime;
-
 
     @Override
-    public synchronized void run() {
-        // Initialize database.
-        JdbcPooledConnectionSource connectionSource = null;
+    void init() {
+        connectionSource = null;
         try {
             // Initialize connection source.
             connectionSource = new JdbcPooledConnectionSource(ConfigurationParser.getConfiguration().databaseUrl);
@@ -68,31 +65,24 @@ public class DatabaseRunnable extends RepeatedRunnable {
         }
 
         ready.succeeded();
+    }
 
-        // Begin loop.
-        while (this.status != RunnableStatus.ENDED && this.status != RunnableStatus.ENDING) {
-            drainQueues();
-            if (threadSaver) {
-                try {
-                    sleep(threadTime);
-                } catch (InterruptedException e) {
+    @Override
+    void loop() {
+        drainQueues();
+    }
 
-                }
-            }
-        }
-
+    @Override
+    void end() {
         drainQueues();
         try {
             connectionSource.close();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
-        // most readable java code
-        this.status = this.status == RunnableStatus.FAILED ? RunnableStatus.FAILED : this.status == RunnableStatus.ENDING ? RunnableStatus.ENDED : RunnableStatus.FAILED;
     }
 
-    private void drainQueues() {
+    private synchronized void drainQueues() {
         List<DatabaseRequest<ItemEntity>> itemRequests = new ArrayList<>(itemQueue.size());
         itemQueue.drainTo(itemRequests);
         for (DatabaseRequest<ItemEntity> request : itemRequests) {
@@ -108,12 +98,6 @@ public class DatabaseRunnable extends RepeatedRunnable {
                     new DatabaseUserRequestOneshot(request, userFutures.get(request))
             );
         }
-    }
-
-    @Override
-    public synchronized void shutdown() {
-        this.status = RunnableStatus.ENDING; // Set status to ending.
-        notifyAll(); // Notify all threads to wake up from sleep/wait.
     }
 
     public static synchronized Dao<ItemEntity, Long> getItemDao() {
