@@ -1,9 +1,6 @@
 package org.team5183.beeapi.middleware;
 
-import com.auth0.jwt.exceptions.AlgorithmMismatchException;
-import com.auth0.jwt.exceptions.IncorrectClaimException;
-import com.auth0.jwt.exceptions.SignatureVerificationException;
-import com.auth0.jwt.exceptions.TokenExpiredException;
+import com.auth0.jwt.exceptions.*;
 import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -49,7 +46,7 @@ public class Authentication {
 
         try {
             JWTManager.decodeToken(token);
-        } catch (TokenExpiredException | SignatureVerificationException | IncorrectClaimException | AlgorithmMismatchException e) {
+        } catch (JWTVerificationException e) {
             response.header("WWW-Authenticate", "Bearer error=\"invalid_token\"");
             halt(401, new Gson().toJson(new BasicResponse(ResponseStatus.ERROR, "Invalid Token")));
         }

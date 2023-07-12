@@ -1,5 +1,6 @@
 package org.team5183.beeapi.endpoints;
 
+import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.google.gson.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -210,7 +211,22 @@ public class UserEndpoint extends Endpoint {
         }
 
         res.header("Authorization", "Bearer " + user.getToken());
+
+        try {
+            JWTManager.decodeToken(user.getToken());
+        } catch (JWTVerificationException e) {
+            user.setToken(JWTManager.generateToken());
+        }
+
         if (user.getToken().isEmpty() || user.getToken().isBlank()) user.setToken(JWTManager.generateToken());
+
+        try {
+            user.update();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            end(500, ResponseStatus.ERROR, "Internal Server Error");
+        }
+
         return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, "Logged in successfully", gson.toJsonTree(user)));
     }
 
