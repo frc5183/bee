@@ -34,11 +34,7 @@ public class ConfigurationParser {
 
         config = new Gson().fromJson(builder.toString(), Configuration.class);
 
-        if (verifyConfiguration(config)) {
-            return false;
-        }
-
-        return true;
+        return !verifyConfiguration(config);
     }
 
     private static boolean verifyConfiguration(Configuration config) throws ConfigurationParseError {

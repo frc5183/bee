@@ -10,7 +10,6 @@ import org.team5183.beeapi.endpoints.UserEndpoint;
 import org.team5183.beeapi.entities.UserEntity;
 import org.team5183.beeapi.runnables.DatabaseRunnable;
 import org.team5183.beeapi.threading.ThreadingManager;
-import spark.Spark;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -95,16 +94,17 @@ public class Main {
             Thread.sleep(1);
         }
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            logger.info("Shutting down...");
-            ThreadingManager.shutdown();
-
-            logger.info("Stopping Spark...");
-            Spark.stop();
-
-            logger.info("Shutdown complete.");
-            System.exit(0);
-        }));
+        // todo: fix this as it will cause the program to hang and never finish
+//        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+//            logger.info("Shutting down...");
+//            ThreadingManager.shutdown();
+//
+//            logger.info("Stopping Spark...");
+//            Spark.stop();
+//
+//            logger.info("Shutdown complete.");
+//            System.exit(0);
+//        }));
 
 
         // Register endpoints

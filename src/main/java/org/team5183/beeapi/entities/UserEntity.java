@@ -1,5 +1,6 @@
 package org.team5183.beeapi.entities;
 
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonSyntaxException;
@@ -49,7 +50,7 @@ public class UserEntity {
     private byte[] salt;
 
     @Expose(serialize = true, deserialize = false)
-    @DatabaseField(canBeNull = false)
+    @DatabaseField(canBeNull = true)
     private String token;
 
     @Expose
@@ -75,7 +76,6 @@ public class UserEntity {
         this.login = login;
         this.email = email;
         this.displayName = displayName;
-        this.token = JWTManager.generateToken();
         byte[][] saltedPassword = HashPassword.generateSaltedHashedPassword(password);
         this.salt = saltedPassword[0];
         this.hashedPassword = saltedPassword[1];
@@ -180,6 +180,10 @@ public class UserEntity {
         if (entities.get() == null) throw new NullPointerException("Entities is null");
         if (entities.get().isEmpty()) return null;
         if (entities.get().get().size() > 1 || entities.get().get().size() < 1) return null;
+
+        DecodedJWT jwt = JWTManager.decodeToken(token);
+        if (!entities.get().get().get(0).getId().equals(jwt.getClaim("id").asLong())) return null;
+        if (!entities.get().get().get(0).getLogin().equals(jwt.getClaim("login").asString())) return null;
         return entities.get().get().get(0);
     }
 

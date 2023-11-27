@@ -1,6 +1,7 @@
 package org.team5183.beeapi.endpoints;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.gson.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -212,13 +213,17 @@ public class UserEndpoint extends Endpoint {
 
         res.header("Authorization", "Bearer " + user.getToken());
 
-        try {
-            JWTManager.decodeToken(user.getToken());
-        } catch (JWTVerificationException e) {
-            user.setToken(JWTManager.generateToken());
+        if (user.getToken() == null || user.getToken().isEmpty() || user.getToken().isBlank()) {
+            user.setToken(JWTManager.generateToken(user.getId(), user.getLogin()));
         }
 
-        if (user.getToken().isEmpty() || user.getToken().isBlank()) user.setToken(JWTManager.generateToken());
+        try {
+            DecodedJWT jwt = JWTManager.decodeToken(user.getToken());
+            if (!user.getLogin().equals(jwt.getClaim("login").asString())) throw new JWTVerificationException("Invalid token");
+            if (!user.getId().equals(jwt.getClaim("id").asLong())) throw new JWTVerificationException("Invalid token");
+        } catch (JWTVerificationException e) {
+            user.setToken(JWTManager.generateToken(user.getId(), user.getLogin()));
+        }
 
         try {
             user.update();
