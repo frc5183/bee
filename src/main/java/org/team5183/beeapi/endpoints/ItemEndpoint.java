@@ -3,6 +3,7 @@ package org.team5183.beeapi.endpoints;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.team5183.beeapi.constants.Permission;
+import org.team5183.beeapi.database.Database;
 import org.team5183.beeapi.entities.CheckoutEntity;
 import org.team5183.beeapi.entities.ItemEntity;
 import org.team5183.beeapi.middleware.Authentication;
@@ -65,7 +66,7 @@ public class ItemEndpoint extends Endpoint {
         }
 
         try {
-            if (ItemEntity.getItemEntity(Long.parseLong(req.params(":id"))) == null)
+            if (Database.getItemDao().queryForId(Long.parseLong(req.params(":id"))) == null)
                 end(404, ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " not found");
         } catch (SQLException e) {
             e.printStackTrace();
@@ -79,7 +80,7 @@ public class ItemEndpoint extends Endpoint {
         before("", this::isItemExist);
 
         try {
-            return ItemEntity.getItemEntity(Long.parseLong(req.params(":id")));
+            return Database.getItemDao().queryForId(Long.parseLong(req.params(":id")));
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
@@ -93,7 +94,7 @@ public class ItemEndpoint extends Endpoint {
 
         if (req.queryParams("limit") == null) {
             try {
-                return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(ItemEntity.getAllItemEntities())));
+                return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(Database.getItemDao().queryForAll())));
             } catch (SQLException e) {
                 e.printStackTrace();
                 end(500, ResponseStatus.ERROR, "Internal Server Error");
@@ -117,12 +118,12 @@ public class ItemEndpoint extends Endpoint {
         try {
             if (limit != null) {
                 if (offset != null) {
-                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(ItemEntity.getAllItemEntities(limit.intValue(), offset.intValue()))));
+                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(Database.getItemDao().queryBuilder().limit(limit).offset(offset).query())));
                 } else {
-                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(ItemEntity.getAllItemEntities(limit))));
+                    return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(Database.getItemDao().queryBuilder().limit(limit).query())));
                 }
             }
-            return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(ItemEntity.getAllItemEntities())));
+            return gson.toJson(new BasicResponse(ResponseStatus.SUCCESS, gson.toJsonTree(Database.getItemDao().queryForAll())));
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
@@ -141,7 +142,7 @@ public class ItemEndpoint extends Endpoint {
         }
 
         try {
-            item.create();
+            Database.getItemDao().create(item);
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
@@ -160,10 +161,10 @@ public class ItemEndpoint extends Endpoint {
         before("", this.checkPermission(req, res, Permission.CAN_DELETE_ITEMS));
         before("", this::isItemExist);
         try {
-            ItemEntity item = ItemEntity.getItemEntity(Long.parseLong(req.params(":id")));
+            ItemEntity item = Database.getItemDao().queryForId(Long.parseLong(req.params(":id")));
             if (item == null) end(404, ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " not found");
             assert item != null;
-            item.delete();
+            Database.getItemDao().delete(item);
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
@@ -192,7 +193,7 @@ public class ItemEndpoint extends Endpoint {
         }
 
         try {
-            item.update();
+            Database.getItemDao().update(item);
         } catch (SQLException e) {
             e.printStackTrace();
             end(500, ResponseStatus.ERROR, "Internal Server Error");
@@ -260,7 +261,7 @@ public class ItemEndpoint extends Endpoint {
         if (!checkout.isValid() || !item.isValid()) end(400, ResponseStatus.ERROR, "Invalid checkout data");
 
         try {
-            item.update();
+            Database.getItemDao().update(item);
         } catch (SQLException e) {
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
@@ -278,7 +279,7 @@ public class ItemEndpoint extends Endpoint {
         ItemEntity item = getItem(req, res);
         assert item != null;
 
-        CheckoutEntity checkout = item.getCheckoutEntity();
+        CheckoutEntity checkout = item.getCheckout();
         if (checkout == null) {
             end(404, ResponseStatus.ERROR, "Item with ID " + req.params(":id") + " is not checked out");
         }
@@ -290,7 +291,7 @@ public class ItemEndpoint extends Endpoint {
         if (!item.isValid()) end(400, ResponseStatus.ERROR, "Invalid return data");
 
         try {
-            item.update();
+            Database.getItemDao().update(item);
         } catch (SQLException e) {
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
@@ -312,7 +313,7 @@ public class ItemEndpoint extends Endpoint {
         checkout.setReturnDate(newCheckout.getReturnDate() == null ? checkout.getReturnDate() : newCheckout.getReturnDate());
 
         if (newCheckout.isActive() != null) {
-            if (newCheckout.isActive() && checkout.getItem().getCheckoutEntity() != null) {
+            if (newCheckout.isActive() && checkout.getItem().getCheckout() != null) {
                 end(400, ResponseStatus.ERROR, "Item with ID " + checkout.getItem().getId() + " is already checked out");
             } else if (newCheckout.isActive()) {
                 checkout.getItem().setCheckoutEntity(checkout);
@@ -325,7 +326,7 @@ public class ItemEndpoint extends Endpoint {
         if (!checkout.isValid() || !checkout.getItem().isValid()) end(400, ResponseStatus.ERROR, "Invalid checkout data");
 
         try {
-            checkout.getItem().update();
+            Database.getItemDao().update(checkout.getItem());
         } catch (SQLException e) {
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }
@@ -338,13 +339,13 @@ public class ItemEndpoint extends Endpoint {
         CheckoutEntity checkout = getCheckout(req, res);
 
         ItemEntity item = checkout.getItem();
-        if (item.getCheckoutEntity() != null) {
-            if (checkout.getId().equals(item.getCheckoutEntity().getId())) end(400, ResponseStatus.ERROR, "Cannot delete active checkout");
+        if (item.getCheckout() != null) {
+            if (checkout.getId().equals(item.getCheckout().getId())) end(400, ResponseStatus.ERROR, "Cannot delete active checkout");
         }
         item.removeCheckoutEntity(checkout);
 
         try {
-            item.update();
+            Database.getItemDao().update(item);
         } catch (SQLException e) {
             end(500, ResponseStatus.ERROR, "Internal Server Error");
         }

@@ -8,6 +8,7 @@ import org.apache.logging.log4j.Logger;
 import org.team5183.beeapi.authentication.JWTManager;
 import org.team5183.beeapi.constants.Permission;
 import org.team5183.beeapi.constants.Role;
+import org.team5183.beeapi.database.Database;
 import org.team5183.beeapi.entities.UserEntity;
 import org.team5183.beeapi.response.BasicResponse;
 import org.team5183.beeapi.response.ResponseStatus;
@@ -48,7 +49,7 @@ public class Authentication {
         }
 
         try {
-            UserEntity user = UserEntity.getUserEntity(jwt.getClaim("id").asLong());
+            UserEntity user = Database.getUserDao().queryForId(jwt.getClaim("id").asLong());
 
             if (user == null) {
                 response.header("WWW-Authenticate", "Bearer error=\"invalid_token\"");
@@ -70,7 +71,7 @@ public class Authentication {
         String token = request.headers("Authorization").replace("Bearer ", "");
 
         try {
-            UserEntity user = UserEntity.getUserEntityByToken(token);
+            UserEntity user = Database.getUserDao().queryForEq("token", token).get(0);
             assert user != null;
             if (!(user.getRole().equals(role))) halt(403, gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Insufficient Permissions")));
         } catch (SQLException e) {
@@ -85,7 +86,7 @@ public class Authentication {
         String token = request.headers("Authorization").replace("Bearer ", "");
 
         try {
-            UserEntity user = UserEntity.getUserEntityByToken(token);
+            UserEntity user = Database.getUserDao().queryForEq("token", token).get(0);
             assert user != null;
             if (!(user.getPermissionsList().contains(permission)) && !((user.getRole().equals(Role.ADMIN)))) halt(403, gson.toJson(new BasicResponse(ResponseStatus.ERROR, "Insufficient Permissions")));
         } catch (SQLException e) {

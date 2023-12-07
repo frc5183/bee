@@ -4,12 +4,11 @@ import org.apache.commons.cli.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.team5183.beeapi.constants.Role;
+import org.team5183.beeapi.database.Database;
 import org.team5183.beeapi.endpoints.ItemEndpoint;
 import org.team5183.beeapi.endpoints.MiscEndpoint;
 import org.team5183.beeapi.endpoints.UserEndpoint;
 import org.team5183.beeapi.entities.UserEntity;
-import org.team5183.beeapi.runnables.DatabaseRunnable;
-import org.team5183.beeapi.threading.ThreadingManager;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -83,17 +82,6 @@ public class Main {
         if (ConfigurationParser.getConfiguration().useSSL)
             secure(ConfigurationParser.getConfiguration().keyStoreFile, ConfigurationParser.getConfiguration().keyStorePassword, ConfigurationParser.getConfiguration().trustStoreFile, ConfigurationParser.getConfiguration().trustStorePassword);
 
-        Thread tm = new Thread(new ThreadingManager());
-        tm.setName("Threading Manager");
-        tm.start();
-
-        // Add threading tasks
-        ThreadingManager.addTask(new DatabaseRunnable());
-
-        while (DatabaseRunnable.getReady().isDone()) {
-            Thread.sleep(1);
-        }
-
         // todo: fix this as it will cause the program to hang and never finish
 //        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 //            logger.info("Shutting down...");
@@ -145,7 +133,7 @@ public class Main {
 
             try {
                 // Create a new admin user.
-                new UserEntity(username, password, email, displayName, Role.ADMIN).create();
+                Database.getUserDao().create(new UserEntity(username, password, email, displayName, Role.ADMIN));
             } catch (Exception e) {
                 e.printStackTrace();
                 logger.fatal("Failed to create admin user, exiting.");
